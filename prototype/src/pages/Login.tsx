@@ -17,7 +17,7 @@ export function Login() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'var(--paper)',
+        background: 'transparent',
         display: 'flex',
         flexDirection: 'column',
       }}

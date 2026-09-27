@@ -81,7 +81,7 @@ export function StyleGuide() {
         <div>
           <h1 className="page-title font-serif">样式总览</h1>
           <div className="page-subtitle">
-            Anthropic 暖纸人文感 × Kimi 极简克制 — 全产品组件基线
+            柔和马卡龙 · 奶油底 × 多彩低饱和 × 超大圆角 — 全产品组件基线
           </div>
         </div>
       </div>
@@ -97,10 +97,10 @@ export function StyleGuide() {
           <Swatch name="纸面 paper" value="var(--paper)" />
           <Swatch name="卡片 surface" value="var(--surface)" />
           <Swatch name="沉底 surface-sunken" value="var(--surface-sunken)" />
-          <Swatch name="陶土 clay" value="var(--clay)" ink="#fff" />
-          <Swatch name="陶土深 clay-hover" value="var(--clay-hover)" ink="#fff" />
-          <Swatch name="陶土软 clay-soft" value="var(--clay-soft)" />
-          <Swatch name="炭 charcoal" value="var(--charcoal)" ink="#fff" />
+          <Swatch name="莓粉 primary" value="var(--clay)" ink="#fff" />
+          <Swatch name="莓粉深 primary-hover" value="var(--clay-hover)" ink="#fff" />
+          <Swatch name="莓粉软 primary-soft" value="var(--clay-soft)" />
+          <Swatch name="梅紫 plum" value="var(--charcoal)" ink="#fff" />
           <Swatch name="墨 ink" value="var(--ink)" ink="#fff" />
           <Swatch name="墨 2" value="var(--ink-2)" ink="#fff" />
           <Swatch name="墨 3" value="var(--ink-3)" ink="#fff" />
@@ -114,18 +114,18 @@ export function StyleGuide() {
             gap: 10,
           }}
         >
-          <Swatch name="鼠尾草绿 sage" value="var(--sage)" ink="#fff" />
-          <Swatch name="赭黄 ochre" value="var(--ochre)" ink="#fff" />
-          <Swatch name="石灰青 teal" value="var(--teal)" ink="#fff" />
-          <Swatch name="霞粉 blush" value="var(--blush)" ink="#fff" />
-          <Swatch name="危险红 danger" value="var(--danger)" ink="#fff" />
+          <Swatch name="薄荷绿 mint" value="var(--sage)" ink="#fff" />
+          <Swatch name="奶油黄 butter" value="var(--ochre)" ink="#fff" />
+          <Swatch name="天空蓝 sky" value="var(--teal)" ink="#fff" />
+          <Swatch name="薰衣草紫 lilac" value="var(--blush)" ink="#fff" />
+          <Swatch name="草莓红 danger" value="var(--danger)" ink="#fff" />
           <Swatch name="大屏 night" value="var(--night)" ink="#fff" />
         </div>
       </Section>
 
       <Section title="字阶">
-        <div className="font-serif" style={{ fontSize: 34 }}>
-          Display 衬线 · 让人才判断有依据
+        <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.02em' }}>
+          Display · 让人才判断有依据
         </div>
         <Divider style={{ margin: '12px 0' }} />
         <div style={{ fontSize: 26, fontWeight: 650 }}>
@@ -157,7 +157,7 @@ export function StyleGuide() {
           <Button danger>危险操作</Button>
           <Button disabled>禁用</Button>
           <Button icon={<PlusOutlined />}>新建</Button>
-          <Tooltip title="陶土为强调色，用于关键高亮动作">
+          <Tooltip title="莓粉为强调色，用于关键高亮动作">
             <Button
               style={{
                 background: 'var(--clay)',
@@ -165,7 +165,7 @@ export function StyleGuide() {
                 color: '#fff',
               }}
             >
-              陶土强调
+              莓粉强调
             </Button>
           </Tooltip>
         </Space>

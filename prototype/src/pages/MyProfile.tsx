@@ -57,8 +57,8 @@ export function MyProfile() {
             <RadarChart
               height={280}
               series={[
-                { name: '当前版本', values: PROFILE_DIMENSIONS.map((d) => current.dims[d.key].score), color: '#d97757' },
-                ...(prev ? [{ name: '上一版本', values: PROFILE_DIMENSIONS.map((d) => prev.dims[d.key].score), color: '#7fa09b' }] : []),
+                { name: '当前版本', values: PROFILE_DIMENSIONS.map((d) => current.dims[d.key].score), color: '#d96a8e' },
+                ...(prev ? [{ name: '上一版本', values: PROFILE_DIMENSIONS.map((d) => prev.dims[d.key].score), color: '#7fb5d6' }] : []),
               ]}
             />
             {prev && (

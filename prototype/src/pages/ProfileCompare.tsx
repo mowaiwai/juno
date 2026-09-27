@@ -64,8 +64,8 @@ export function ProfileCompare() {
             <RadarChart
               height={320}
               series={[
-                { name: a.version, values: PROFILE_DIMENSIONS.map((d) => a.dims[d.key].score), color: '#7fa09b' },
-                { name: b.version, values: PROFILE_DIMENSIONS.map((d) => b.dims[d.key].score), color: '#d97757' },
+                { name: a.version, values: PROFILE_DIMENSIONS.map((d) => a.dims[d.key].score), color: '#7fb5d6' },
+                { name: b.version, values: PROFILE_DIMENSIONS.map((d) => b.dims[d.key].score), color: '#d96a8e' },
               ]}
             />
             <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink-3)' }}>

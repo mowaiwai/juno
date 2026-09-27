@@ -1,8 +1,9 @@
 import ReactECharts from 'echarts-for-react';
 import { Card, Col, Row, Space, Table, Tag } from 'antd';
 import { initialInventory, LEVEL_LABEL } from '@/mock/gap';
+import { CHART } from '@/charts/palette';
 
-const LEVEL_COLOR = { qualified: 'var(--sage)', near: 'var(--ochre)', need_improve: 'var(--danger)' };
+const LEVEL_COLOR = { qualified: CHART.mint, near: CHART.butter, need_improve: CHART.danger };
 
 export function InitialInventory() {
   const data = initialInventory();
@@ -15,13 +16,13 @@ export function InitialInventory() {
     xAxis: {
       type: 'category',
       data: data.map((d) => d.grade),
-      axisLine: { lineStyle: { color: '#e7e3d9' } },
-      axisLabel: { color: '#57534b' },
+      axisLine: { lineStyle: { color: CHART.line } },
+      axisLabel: { color: CHART.ink2 },
     },
     yAxis: {
       type: 'value',
-      axisLabel: { color: '#57534b' },
-      splitLine: { lineStyle: { color: '#e7e3d9' } },
+      axisLabel: { color: CHART.ink2 },
+      splitLine: { lineStyle: { color: CHART.line } },
     },
     series: [{
       type: 'bar',
@@ -30,7 +31,7 @@ export function InitialInventory() {
         itemStyle: { color: LEVEL_COLOR[d.level], borderRadius: [6, 6, 0, 0] },
       })),
       barWidth: 40,
-      label: { show: true, position: 'top', color: '#57534b' },
+      label: { show: true, position: 'top', color: CHART.ink2 },
     }],
   };
 

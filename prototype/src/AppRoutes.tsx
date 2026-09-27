@@ -78,11 +78,14 @@ import { PlatformTenants } from '@/pages/PlatformTenants';
 import { PlatformBoard } from '@/pages/PlatformBoard';
 import { WsTenant } from '@/pages/WsTenant';
 import { WsPlatform } from '@/pages/WsPlatform';
+import { SciBackground } from '@/components/SciBackground';
 
 export function AppRoutes() {
   return (
     <BrowserRouter>
-      <Routes>
+      <SciBackground />
+      <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<Navigate to="/app/home" replace />} />
@@ -166,7 +169,8 @@ export function AppRoutes() {
           <Route path="page/:key" element={<ComingSoon />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }

@@ -1,43 +1,44 @@
 /* ============================================================
-   Design Tokens — Anthropic 暖纸人文感 × Kimi 极简克制
+   Design Tokens — 柔和马卡龙 · 奶油底 × 多彩低饱和 × 超大圆角
    ============================================================ */
 :root {
-  /* 纸面与表面 */
-  --paper: #f5f4ee;
-  --paper-soft: #efece4;
+  /* 奶油底与表面 */
+  --paper: #fbf8f4;
+  --paper-soft: #f3ede7;
   --surface: #ffffff;
-  --surface-sunken: #faf9f5;
-  --surface-hover: #f7f5ef;
+  --surface-sunken: #f8f4f0;
+  --surface-hover: #f6f1f3;
 
-  /* 墨色（暖灰阶） */
-  --ink: #211f1c;
-  --ink-2: #57534b;
-  --ink-3: #8a857a;
-  --ink-4: #b4afa4;
+  /* 墨色（暖紫灰阶，柔和不生硬） */
+  --ink: #35313d;
+  --ink-2: #6e6778;
+  --ink-3: #a099aa;
+  --ink-4: #c9c2d0;
 
-  /* 描边 */
-  --line: #e7e3d9;
-  --line-strong: #d8d2c4;
+  /* 描边（粉调浅线） */
+  --line: #f0e9ee;
+  --line-strong: #e3d9e2;
 
-  /* 强调色 */
-  --clay: #d97757;
-  --clay-hover: #c2653f;
-  --clay-soft: #f7e8e1;
-  --charcoal: #2b2825;
-  --charcoal-hover: #3d3934;
+  /* 主强调色：马卡龙莓粉 */
+  --clay: #d96a8e;
+  --clay-hover: #c7567c;
+  --clay-soft: #fce9f1;
+  /* 深色锚点：梅紫 */
+  --charcoal: #4a4459;
+  --charcoal-hover: #5c556e;
 
-  /* 图表 / 语义色（低饱和 earthy） */
-  --sage: #7e9b78;
-  --sage-soft: #e9efe5;
-  --ochre: #c2a05a;
-  --ochre-soft: #f4ecd9;
-  --teal: #7fa09b;
-  --teal-soft: #e6efed;
-  --blush: #d9a092;
-  --danger: #b5524a;
-  --danger-soft: #f5e3e1;
+  /* 图表 / 语义色（马卡龙多彩） */
+  --sage: #7fc49b;
+  --sage-soft: #e6f5ec;
+  --ochre: #e3be6b;
+  --ochre-soft: #fbf2dc;
+  --teal: #7fb5d6;
+  --teal-soft: #e4f1f9;
+  --blush: #b79bd8;
+  --danger: #de7066;
+  --danger-soft: #fbe9e7;
 
-  /* 深色大屏 */
+  /* 深色大屏（保持不变） */
   --night: #1b1a18;
   --night-2: #26241f;
   --night-line: #3a362f;
@@ -60,13 +61,13 @@
   --text-sm: 13px;
   --text-xs: 12px;
 
-  /* 圆角 / 阴影 / 间距 */
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
-  --shadow-card: 0 1px 2px rgba(33, 31, 28, 0.05),
-    0 4px 16px -6px rgba(33, 31, 28, 0.06);
-  --shadow-pop: 0 8px 30px -8px rgba(33, 31, 28, 0.18);
+  /* 圆角（马卡龙超大圆角） / 阴影 / 间距 */
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --shadow-card: 0 1px 2px rgba(80, 60, 80, 0.04),
+    0 10px 28px -12px rgba(150, 110, 140, 0.22);
+  --shadow-pop: 0 14px 44px -12px rgba(120, 90, 130, 0.28);
 
   --space-page: 24px;
 }

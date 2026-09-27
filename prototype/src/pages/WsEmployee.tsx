@@ -168,7 +168,7 @@ export function WsEmployee() {
                 </div>
                 <RadarChart
                   height={210}
-                  series={[{ name: 'v2025Q3', values: PROFILE_DIMENSIONS.map((d) => profile.dims[d.key].score), color: '#d97757' }]}
+                  series={[{ name: 'v2025Q3', values: PROFILE_DIMENSIONS.map((d) => profile.dims[d.key].score), color: '#d96a8e' }]}
                 />
               </>
             )}

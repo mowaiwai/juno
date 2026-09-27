@@ -2,16 +2,17 @@ import { useMemo } from 'react';
 import { Card, Col, Progress, Row, Table, Tag } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import { aiQuota, aiUsageRows, aiUsageTrend } from '@/mock/saas';
+import { CHART } from '@/charts/palette';
 
 const fmtTokens = (v: number) => (v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : Math.round(v / 1000) + 'k');
 
 const SCENE_COLOR: Record<string, string> = {
-  出题: '#d97757',
-  归因: '#c2a05a',
-  问答: '#7fa09b',
-  预审: '#7e9b78',
-  画像: '#2b2825',
-  IDP: '#b5524a',
+  出题: CHART.primary,
+  归因: CHART.butter,
+  问答: CHART.sky,
+  预审: CHART.mint,
+  画像: CHART.plum,
+  IDP: CHART.danger,
 };
 
 export function AiUsage() {
@@ -21,16 +22,16 @@ export function AiUsage() {
     () => ({
       grid: { left: 44, right: 44, top: 36, bottom: 28 },
       tooltip: { trigger: 'axis' as const },
-      legend: { data: ['Token 用量（百万）', '费用（元）'], top: 0, textStyle: { color: '#57534b' }, itemWidth: 12 },
+      legend: { data: ['Token 用量（百万）', '费用（元）'], top: 0, textStyle: { color: CHART.ink2 }, itemWidth: 12 },
       xAxis: {
         type: 'category' as const,
         data: aiUsageTrend.map((t) => t.month),
-        axisLine: { lineStyle: { color: '#e7e3d9' } },
-        axisLabel: { color: '#8a857a' },
+        axisLine: { lineStyle: { color: CHART.line } },
+        axisLabel: { color: CHART.ink3 },
       },
       yAxis: [
-        { type: 'value' as const, name: '百万 tokens', nameTextStyle: { color: '#8a857a' }, splitLine: { lineStyle: { color: '#e7e3d9' } }, axisLabel: { color: '#8a857a' } },
-        { type: 'value' as const, name: '元', nameTextStyle: { color: '#8a857a' }, splitLine: { show: false }, axisLabel: { color: '#8a857a' } },
+        { type: 'value' as const, name: '百万 tokens', nameTextStyle: { color: CHART.ink3 }, splitLine: { lineStyle: { color: CHART.line } }, axisLabel: { color: CHART.ink3 } },
+        { type: 'value' as const, name: '元', nameTextStyle: { color: CHART.ink3 }, splitLine: { show: false }, axisLabel: { color: CHART.ink3 } },
       ],
       series: [
         {
@@ -38,7 +39,7 @@ export function AiUsage() {
           type: 'bar' as const,
           data: aiUsageTrend.map((t) => t.tokens),
           barWidth: 22,
-          itemStyle: { color: '#d97757', borderRadius: [5, 5, 0, 0] },
+          itemStyle: { color: CHART.primary, borderRadius: [6, 6, 0, 0] },
         },
         {
           name: '费用（元）',
@@ -47,8 +48,8 @@ export function AiUsage() {
           data: aiUsageTrend.map((t) => t.cost),
           smooth: true,
           symbolSize: 7,
-          lineStyle: { color: '#2b2825', width: 2 },
-          itemStyle: { color: '#2b2825' },
+          lineStyle: { color: CHART.plum, width: 2 },
+          itemStyle: { color: CHART.plum },
         },
       ],
     }),

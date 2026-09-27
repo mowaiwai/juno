@@ -1,15 +1,16 @@
 import ReactECharts from 'echarts-for-react';
 import { Card, Col, Row, Space, Table, Tag } from 'antd';
 import { deptStructures } from '@/mock/inventory';
+import { CHART, GRADE_RAMP } from '@/charts/palette';
 
 const GRADE_ORDER = ['P2', 'P3', 'P4', 'P5', 'M1', 'M2', 'M3', 'O2', 'O3', 'S2', 'S3', 'S4', 'T3'];
-const GRADE_COLORS = ['#d97757', '#e0927a', '#c2a05a', '#a88848', '#7fa09b', '#6b8b87', '#5a7572', '#7e9b78', '#668562', '#8a857a', '#6e6a62', '#57534b', '#b4afa4'];
+const GRADE_COLORS = GRADE_RAMP;
 
 const SHAPE_COLOR: Record<string, string> = {
-  dumbbell: 'var(--danger)',
-  diamond: 'var(--ochre)',
-  pyramid: 'var(--teal)',
-  healthy: 'var(--sage)',
+  dumbbell: CHART.danger,
+  diamond: CHART.butter,
+  pyramid: CHART.sky,
+  healthy: CHART.mint,
 };
 
 export function StructureViz() {
@@ -22,18 +23,18 @@ export function StructureViz() {
 
   const option = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { data: grades, textStyle: { color: '#57534b' }, type: 'scroll' },
+    legend: { data: grades, textStyle: { color: CHART.ink2 }, type: 'scroll' },
     grid: { left: 40, right: 20, top: 50, bottom: 40 },
     xAxis: {
       type: 'category',
       data: structs.map((s) => s.deptName),
-      axisLine: { lineStyle: { color: '#e7e3d9' } },
-      axisLabel: { color: '#57534b' },
+      axisLine: { lineStyle: { color: CHART.line } },
+      axisLabel: { color: CHART.ink2 },
     },
     yAxis: {
       type: 'value',
-      axisLabel: { color: '#57534b' },
-      splitLine: { lineStyle: { color: '#e7e3d9' } },
+      axisLabel: { color: CHART.ink2 },
+      splitLine: { lineStyle: { color: CHART.line } },
     },
     series: grades.map((g, i) => ({
       name: g,

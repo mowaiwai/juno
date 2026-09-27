@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Card, Col, Row, Tag } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import { industryDist, mrrTrend, planDist, platformKpi, platformTenants } from '@/mock/saas';
+import { CHART, MACARON } from '@/charts/palette';
 
 export function PlatformBoard() {
   const mrrOption = useMemo(
@@ -12,15 +13,15 @@ export function PlatformBoard() {
         type: 'category' as const,
         boundaryGap: false,
         data: mrrTrend.map((t) => t.month),
-        axisLine: { lineStyle: { color: '#e7e3d9' } },
-        axisLabel: { color: '#8a857a' },
+        axisLine: { lineStyle: { color: CHART.line } },
+        axisLabel: { color: CHART.ink3 },
       },
       yAxis: {
         type: 'value' as const,
         name: '万元',
-        nameTextStyle: { color: '#8a857a' },
-        splitLine: { lineStyle: { color: '#e7e3d9' } },
-        axisLabel: { color: '#8a857a' },
+        nameTextStyle: { color: CHART.ink3 },
+        splitLine: { lineStyle: { color: CHART.line } },
+        axisLabel: { color: CHART.ink3 },
       },
       series: [
         {
@@ -29,15 +30,15 @@ export function PlatformBoard() {
           data: mrrTrend.map((t) => t.mrr),
           smooth: true,
           symbolSize: 7,
-          lineStyle: { color: '#d97757', width: 2.5 },
-          itemStyle: { color: '#d97757' },
+          lineStyle: { color: CHART.primary, width: 2.5 },
+          itemStyle: { color: CHART.primary },
           areaStyle: {
             color: {
               type: 'linear' as const,
               x: 0, y: 0, x2: 0, y2: 1,
               colorStops: [
-                { offset: 0, color: 'rgba(217,119,87,0.28)' },
-                { offset: 1, color: 'rgba(217,119,87,0.02)' },
+                { offset: 0, color: 'rgba(217,106,142,0.28)' },
+                { offset: 1, color: 'rgba(217,106,142,0.02)' },
               ],
             },
           },
@@ -49,7 +50,7 @@ export function PlatformBoard() {
 
   const pieCommon = (data: { name: string; value: number }[], colors: string[]) => ({
     tooltip: { trigger: 'item' as const, formatter: '{b}: {c} ({d}%)' },
-    legend: { bottom: 0, textStyle: { color: '#57534b' }, itemWidth: 10, itemHeight: 10 },
+    legend: { bottom: 0, textStyle: { color: CHART.ink2 }, itemWidth: 10, itemHeight: 10 },
     color: colors,
     series: [
       {
@@ -104,7 +105,7 @@ export function PlatformBoard() {
         <Col span={7}>
           <Card variant="borderless" style={{ background: 'var(--surface)', height: '100%' }} size="small" title="租户行业分布">
             <ReactECharts
-              option={pieCommon(industryDist, ['#d97757', '#7fa09b', '#c2a05a', '#7e9b78', '#b4afa4'])}
+              option={pieCommon(industryDist, MACARON.slice(0, 5))}
               style={{ height: 290 }}
             />
           </Card>
@@ -112,7 +113,7 @@ export function PlatformBoard() {
         <Col span={7}>
           <Card variant="borderless" style={{ background: 'var(--surface)', height: '100%' }} size="small" title="套餐结构分布">
             <ReactECharts
-              option={pieCommon(planDist, ['#b4afa4', '#7fa09b', '#d97757', '#2b2825'])}
+              option={pieCommon(planDist, [CHART.ink4, CHART.sky, CHART.primary, CHART.plum])}
               style={{ height: 290 }}
             />
           </Card>

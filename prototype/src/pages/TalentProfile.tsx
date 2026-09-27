@@ -141,7 +141,7 @@ export function TalentProfile() {
                   <Col span={11}>
                     <RadarChart
                       height={260}
-                      series={[{ name: profile.version, values: PROFILE_DIMENSIONS.map((d) => profile.dims[d.key].score), color: '#d97757' }]}
+                      series={[{ name: profile.version, values: PROFILE_DIMENSIONS.map((d) => profile.dims[d.key].score), color: '#d96a8e' }]}
                     />
                   </Col>
                   <Col span={13}>

@@ -3,6 +3,7 @@ import { Card, Col, List, Row, Space, Tag } from 'antd';
 import { AppstoreOutlined, DashboardOutlined, TeamOutlined } from '@ant-design/icons';
 import { industryDist, mrrTrend, platformKpi, platformTenants } from '@/mock/saas';
 import ReactECharts from 'echarts-for-react';
+import { CHART } from '@/charts/palette';
 
 const QUICK = [
   { to: '/app/platform-tenants', icon: <TeamOutlined />, label: '租户管理', desc: '开通 / 停用 · 套餐续费' },
@@ -21,8 +22,8 @@ const sparkOption = {
       data: mrrTrend.map((t) => t.mrr),
       smooth: true,
       showSymbol: false,
-      lineStyle: { color: '#d97757', width: 2 },
-      areaStyle: { color: 'rgba(217,119,87,0.18)' },
+      lineStyle: { color: CHART.primary, width: 2 },
+      areaStyle: { color: 'rgba(217,106,142,0.18)' },
     },
   ],
 };
@@ -104,10 +105,10 @@ export function WsPlatform() {
             <List
               size="small"
               dataSource={[
-                { t: '启明智造试用第 12 天，CSM 安排转化沟通', tag: '转化', color: 'var(--ochre)' },
-                { t: '卓信电子已停用 38 天，数据保留期剩 52 天', tag: '留存', color: 'var(--danger)' },
-                { t: '医疗服务试行包 v0.9 待审核上架材料', tag: '模板', color: 'var(--teal)' },
-                { t: '中拓贸易续费合同 10 月到期，提前跟进', tag: '续费', color: 'var(--sage)' },
+                { t: '启明智造试用第 12 天，CSM 安排转化沟通', tag: '转化', color: CHART.butter },
+                { t: '卓信电子已停用 38 天，数据保留期剩 52 天', tag: '留存', color: CHART.danger },
+                { t: '医疗服务试行包 v0.9 待审核上架材料', tag: '模板', color: CHART.sky },
+                { t: '中拓贸易续费合同 10 月到期，提前跟进', tag: '续费', color: CHART.mint },
               ]}
               renderItem={(it) => (
                 <List.Item style={{ paddingLeft: 0 }}>

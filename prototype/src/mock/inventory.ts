@@ -99,15 +99,15 @@ export interface GridCell {
 }
 
 export const GRID_CELLS: GridCell[] = [
-  { code: '9A1', col: 'A', row: 1, label: '明星', strategy: '重点培养：纳入梯队、给核心项目、加速晋升通道', color: '#d97757' },
-  { code: '9A2', col: 'A', row: 2, label: '核心骨干', strategy: '保留激励：调薪倾斜、关键岗位匹配、避免倦怠', color: '#c2a05a' },
-  { code: '9A3', col: 'A', row: 3, label: '业绩之星', strategy: '留用激励：保持业绩、补能力短板、转专家路线', color: '#7fa09b' },
-  { code: '9B1', col: 'B', row: 1, label: '潜力股', strategy: '培养辅导：补业绩、给挑战任务、配导师', color: '#7e9b78' },
-  { code: '9B2', col: 'B', row: 2, label: '中坚力量', strategy: '稳定发展：维持节奏、横向拓展、阶梯晋升', color: '#8a857a' },
-  { code: '9B3', col: 'B', row: 3, label: '待改进', strategy: '绩效改进：设 PIP、3 个月复盘、不行转岗/降级', color: '#b5524a' },
-  { code: '9C1', col: 'C', row: 1, label: '问题员工', strategy: '意愿干预：面谈找原因、调岗激发、保留观察', color: '#d9a092' },
-  { code: '9C2', col: 'C', row: 2, label: '待发展', strategy: '补知识：IDP 聚焦能力短板、培训+实践', color: '#b4afa4' },
-  { code: '9C3', col: 'C', row: 3, label: '淘汰区', strategy: '退出：转岗/降薪/协商解除，严控占比', color: '#b5524a' },
+  { code: '9A1', col: 'A', row: 1, label: '明星', strategy: '重点培养：纳入梯队、给核心项目、加速晋升通道', color: '#d96a8e' },
+  { code: '9A2', col: 'A', row: 2, label: '核心骨干', strategy: '保留激励：调薪倾斜、关键岗位匹配、避免倦怠', color: '#e3be6b' },
+  { code: '9A3', col: 'A', row: 3, label: '业绩之星', strategy: '留用激励：保持业绩、补能力短板、转专家路线', color: '#7fb5d6' },
+  { code: '9B1', col: 'B', row: 1, label: '潜力股', strategy: '培养辅导：补业绩、给挑战任务、配导师', color: '#7fc49b' },
+  { code: '9B2', col: 'B', row: 2, label: '中坚力量', strategy: '稳定发展：维持节奏、横向拓展、阶梯晋升', color: '#a099aa' },
+  { code: '9B3', col: 'B', row: 3, label: '待改进', strategy: '绩效改进：设 PIP、3 个月复盘、不行转岗/降级', color: '#de7066' },
+  { code: '9C1', col: 'C', row: 1, label: '问题员工', strategy: '意愿干预：面谈找原因、调岗激发、保留观察', color: '#e89a90' },
+  { code: '9C2', col: 'C', row: 2, label: '待发展', strategy: '补知识：IDP 聚焦能力短板、培训+实践', color: '#c9c2d0' },
+  { code: '9C3', col: 'C', row: 3, label: '淘汰区', strategy: '退出：转岗/降薪/协商解除，严控占比', color: '#de7066' },
 ];
 
 export const GRID_DIM_PAIRS = [

@@ -62,11 +62,13 @@ export function AppLayout() {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh', background: 'var(--paper)' }}>
+    <Layout style={{ minHeight: '100vh', background: 'transparent' }}>
       <Sider
         width={232}
         style={{
-          background: 'var(--surface-sunken)',
+          background: 'rgba(251, 248, 244, 0.72)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
           borderRight: '1px solid var(--line)',
         }}
       >
@@ -115,10 +117,12 @@ export function AppLayout() {
           }}
         />
       </Sider>
-      <Layout style={{ background: 'var(--paper)' }}>
+      <Layout style={{ background: 'transparent' }}>
         <Header
           style={{
-            background: 'var(--paper)',
+            background: 'rgba(251, 248, 244, 0.72)',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
             borderBottom: '1px solid var(--line)',
             display: 'flex',
             alignItems: 'center',

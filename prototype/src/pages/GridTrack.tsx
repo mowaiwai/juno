@@ -4,6 +4,7 @@ import { Card, Col, Row, Select, Space, Tag, Timeline } from 'antd';
 import { employees } from '@/mock/people';
 import { deptName } from '@/mock/org';
 import { GRID_CELLS } from '@/mock/inventory';
+import { CHART } from '@/charts/palette';
 
 /** 每个员工的历史九宫格轨迹（mock，按姓名首字母确定性生成） */
 function historyOf(empId: string) {
@@ -36,8 +37,8 @@ export function GridTrack() {
     xAxis: {
       type: 'category',
       data: history.map((h) => h.batch),
-      axisLine: { lineStyle: { color: '#e7e3d9' } },
-      axisLabel: { color: '#57534b' },
+      axisLine: { lineStyle: { color: CHART.line } },
+      axisLabel: { color: CHART.ink2 },
     },
     yAxis: {
       type: 'value',
@@ -45,11 +46,11 @@ export function GridTrack() {
       max: 3,
       interval: 1,
       axisLabel: {
-        color: '#57534b',
+        color: CHART.ink2,
         formatter: (v: number) => ({ 1: '高潜', 2: '中潜', 3: '低潜' })[v],
       },
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: '#e7e3d9', type: 'dashed' } },
+      splitLine: { lineStyle: { color: CHART.line, type: 'dashed' } },
     },
     series: [
       {
@@ -58,9 +59,9 @@ export function GridTrack() {
         smooth: true,
         symbol: 'circle',
         symbolSize: 18,
-        lineStyle: { color: '#d97757', width: 3 },
-        itemStyle: { color: '#d97757', borderColor: '#fff', borderWidth: 2 },
-        label: { show: true, formatter: (p: { dataIndex: number }) => history[p.dataIndex].grid, color: '#211f1c', fontWeight: 700, position: 'top' },
+        lineStyle: { color: CHART.primary, width: 3 },
+        itemStyle: { color: CHART.primary, borderColor: '#fff', borderWidth: 2 },
+        label: { show: true, formatter: (p: { dataIndex: number }) => history[p.dataIndex].grid, color: CHART.ink, fontWeight: 700, position: 'top' },
       },
     ],
   };
