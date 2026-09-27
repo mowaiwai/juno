@@ -27,6 +27,18 @@ import { CertVote } from '@/pages/CertVote';
 import { TalentProfile } from '@/pages/TalentProfile';
 import { ProfileCompare } from '@/pages/ProfileCompare';
 import { Notifications } from '@/pages/Notifications';
+// 批次 4 · 盘点 · 九宫格 · 驾驶舱
+import { InvBatches } from '@/pages/InvBatches';
+import { InvCreate } from '@/pages/InvCreate';
+import { InvCalibrate } from '@/pages/InvCalibrate';
+import { NineGrid } from '@/pages/NineGrid';
+import { GridTrack } from '@/pages/GridTrack';
+import { GridStrategy } from '@/pages/GridStrategy';
+import { ThreeCharts } from '@/pages/ThreeCharts';
+import { CockpitQA } from '@/pages/CockpitQA';
+import { StructureViz } from '@/pages/StructureViz';
+import { GapWarning } from '@/pages/GapWarning';
+import { LiquidTeam } from '@/pages/LiquidTeam';
 
 export function AppRoutes() {
   return (
@@ -61,6 +73,18 @@ export function AppRoutes() {
           <Route path="talent-profile" element={<TalentProfile />} />
           <Route path="profile-compare" element={<ProfileCompare />} />
           <Route path="notifications" element={<Notifications />} />
+          {/* 批次 4 · 盘点 · 九宫格 · 驾驶舱 */}
+          <Route path="inv-batches" element={<InvBatches />} />
+          <Route path="inv-create" element={<InvCreate />} />
+          <Route path="inv-calibrate" element={<InvCalibrate />} />
+          <Route path="nine-grid" element={<NineGrid />} />
+          <Route path="grid-track" element={<GridTrack />} />
+          <Route path="grid-strategy" element={<GridStrategy />} />
+          <Route path="three-charts" element={<ThreeCharts />} />
+          <Route path="cockpit-qa" element={<CockpitQA />} />
+          <Route path="structure-viz" element={<StructureViz />} />
+          <Route path="gap-warning" element={<GapWarning />} />
+          <Route path="liquid-team" element={<LiquidTeam />} />
           <Route path="page/:key" element={<ComingSoon />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

@@ -50,17 +50,17 @@ export const pageRegistry: PageMeta[] = [
   { key: 'notifications', title: '待办消息中心', group: '认证管理', batch: 3, roles: A, depth: '◐', done: true },
 
   // ============ 批次 4 · 盘点 · 九宫格 · 驾驶舱 ============
-  { key: 'inv-batches', title: '盘点批次', group: '人才盘点', batch: 4, roles: ['hr', 'exec', 'manager'], depth: '●', done: false },
-  { key: 'inv-create', title: '发起盘点', group: '人才盘点', batch: 4, roles: ['hr'], depth: '●', done: false },
-  { key: 'inv-calibrate', title: '初排与校准', group: '人才盘点', batch: 4, roles: ['hr', 'manager', 'exec'], depth: '●', done: false },
-  { key: 'nine-grid', title: '九宫格看板', group: '人才盘点', batch: 4, roles: ['exec', 'hr', 'manager'], depth: '●', done: false, note: '演示高潮' },
-  { key: 'grid-track', title: '位置轨迹', group: '人才盘点', batch: 4, roles: ['exec', 'hr', 'manager'], depth: '◐', done: false },
-  { key: 'grid-strategy', title: '差异化策略', group: '人才盘点', batch: 4, roles: ['exec', 'hr', 'manager'], depth: '◐', done: false },
-  { key: 'three-charts', title: '三张图驾驶舱', group: '人才盘点', batch: 4, roles: ['exec', 'hr'], depth: '●', done: false, note: '深色大屏' },
-  { key: 'cockpit-qa', title: '驾驶舱问答', group: '人才盘点', batch: 4, roles: ['exec', 'hr'], depth: '◐', done: false },
-  { key: 'structure-viz', title: '人才结构可视化', group: '人才盘点', batch: 4, roles: ['hr', 'exec'], depth: '●', done: false },
-  { key: 'gap-warning', title: '断层预警', group: '人才盘点', batch: 4, roles: ['hr', 'exec'], depth: '◐', done: false },
-  { key: 'liquid-team', title: '液态组队', group: '人才盘点', batch: 4, roles: ['hr', 'manager', 'exec'], depth: '◐', done: false },
+  { key: 'inv-batches', title: '盘点批次', group: '人才盘点', batch: 4, roles: ['hr', 'exec', 'manager'], depth: '●', done: true },
+  { key: 'inv-create', title: '发起盘点', group: '人才盘点', batch: 4, roles: ['hr'], depth: '●', done: true },
+  { key: 'inv-calibrate', title: '初排与校准', group: '人才盘点', batch: 4, roles: ['hr', 'manager', 'exec'], depth: '●', done: true },
+  { key: 'nine-grid', title: '九宫格看板', group: '人才盘点', batch: 4, roles: ['exec', 'hr', 'manager'], depth: '●', done: true, note: '演示高潮' },
+  { key: 'grid-track', title: '位置轨迹', group: '人才盘点', batch: 4, roles: ['exec', 'hr', 'manager'], depth: '◐', done: true },
+  { key: 'grid-strategy', title: '差异化策略', group: '人才盘点', batch: 4, roles: ['exec', 'hr', 'manager'], depth: '◐', done: true },
+  { key: 'three-charts', title: '三张图驾驶舱', group: '人才盘点', batch: 4, roles: ['exec', 'hr'], depth: '●', done: true, note: '深色大屏' },
+  { key: 'cockpit-qa', title: '驾驶舱问答', group: '人才盘点', batch: 4, roles: ['exec', 'hr'], depth: '◐', done: true },
+  { key: 'structure-viz', title: '人才结构可视化', group: '人才盘点', batch: 4, roles: ['hr', 'exec'], depth: '●', done: true },
+  { key: 'gap-warning', title: '断层预警', group: '人才盘点', batch: 4, roles: ['hr', 'exec'], depth: '◐', done: true },
+  { key: 'liquid-team', title: '液态组队', group: '人才盘点', batch: 4, roles: ['hr', 'manager', 'exec'], depth: '◐', done: true },
 
   // ============ 批次 5 · 差距 · 发展 · 绩效 ============
   { key: 'gap-board', title: '差距分析看板', group: '人岗匹配', batch: 5, roles: ['manager', 'hr', 'exec'], depth: '●', done: false },
