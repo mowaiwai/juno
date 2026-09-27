@@ -12,6 +12,21 @@ import { StandardDetail } from '@/pages/StandardDetail';
 import { StandardVersions } from '@/pages/StandardVersions';
 import { Roster } from '@/pages/Roster';
 import { EmployeeDetail } from '@/pages/EmployeeDetail';
+// 批次 3 · 认证与画像
+import { WsEmployee } from '@/pages/WsEmployee';
+import { WsManager } from '@/pages/WsManager';
+import { WsHr } from '@/pages/WsHr';
+import { WsExec } from '@/pages/WsExec';
+import { MyChannel } from '@/pages/MyChannel';
+import { MyProfile } from '@/pages/MyProfile';
+import { MyGap } from '@/pages/MyGap';
+import { CertApply } from '@/pages/CertApply';
+import { MyCert } from '@/pages/MyCert';
+import { CertReview } from '@/pages/CertReview';
+import { CertVote } from '@/pages/CertVote';
+import { TalentProfile } from '@/pages/TalentProfile';
+import { ProfileCompare } from '@/pages/ProfileCompare';
+import { Notifications } from '@/pages/Notifications';
 
 export function AppRoutes() {
   return (
@@ -31,6 +46,21 @@ export function AppRoutes() {
           <Route path="standard-versions" element={<StandardVersions />} />
           <Route path="roster" element={<Roster />} />
           <Route path="employee-detail" element={<EmployeeDetail />} />
+          {/* 批次 3 · 认证与画像 */}
+          <Route path="ws-employee" element={<WsEmployee />} />
+          <Route path="ws-manager" element={<WsManager />} />
+          <Route path="ws-hr" element={<WsHr />} />
+          <Route path="ws-exec" element={<WsExec />} />
+          <Route path="my-channel" element={<MyChannel />} />
+          <Route path="my-profile" element={<MyProfile />} />
+          <Route path="my-gap" element={<MyGap />} />
+          <Route path="cert-apply" element={<CertApply />} />
+          <Route path="my-cert" element={<MyCert />} />
+          <Route path="cert-review" element={<CertReview />} />
+          <Route path="cert-vote" element={<CertVote />} />
+          <Route path="talent-profile" element={<TalentProfile />} />
+          <Route path="profile-compare" element={<ProfileCompare />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="page/:key" element={<ComingSoon />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
