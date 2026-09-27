@@ -1,0 +1,130 @@
+import type { Employee, Persona } from '@/types';
+
+export const employees: Employee[] = [
+  // ---- 高管 / 中心负责人 ----
+  { id: 'E10001', name: '张澜', deptId: '100', position: '首席执行官', family: 'M', sequence: 'MGT', grade: 'M5', years: 12, perf: 'S', perfScore: 96, potential: 'HIGH', grid: '9A1', salary: 120000, isCorePosition: true, risk: 'LOW', tags: ['一把手'] },
+  { id: 'E10010', name: '高启明', deptId: '300', position: '研发总监', family: 'M', sequence: 'MGT', grade: 'M4', years: 10, perf: 'A', perfScore: 91, potential: 'HIGH', grid: '9A1', salary: 78000, isCorePosition: true, risk: 'MID', tags: ['核心人才', '外部机会多'] },
+  { id: 'E10050', name: '马德海', deptId: '400', position: '制造总监', family: 'M', sequence: 'MGT', grade: 'M4', years: 15, perf: 'B', perfScore: 84, potential: 'MID', grid: '9B2', salary: 70000, isCorePosition: true, risk: 'LOW', tags: ['老黄牛'] },
+  { id: 'E10060', name: '何立群', deptId: '500', position: '供应链总监', family: 'M', sequence: 'MGT', grade: 'M3', years: 9, perf: 'A', perfScore: 89, potential: 'MID', grid: '9A2', salary: 56000, isCorePosition: true, risk: 'LOW', tags: [] },
+  { id: 'E10070', name: '沈一楠', deptId: '600', position: '营销总监', family: 'M', sequence: 'MGT', grade: 'M3', years: 8, perf: 'S', perfScore: 97, potential: 'HIGH', grid: '9A1', salary: 62000, isCorePosition: true, risk: 'LOW', tags: ['核心人才'] },
+  { id: 'E10002', name: '周敏', deptId: '201', position: 'HRD', family: 'M', sequence: 'MGT', grade: 'M3', years: 11, perf: 'A', perfScore: 90, potential: 'HIGH', grid: '9A1', salary: 52000, isCorePosition: true, risk: 'LOW', tags: ['管委会成员'] },
+  { id: 'E10003', name: '李卫国', deptId: '202', position: '财务总监', family: 'M', sequence: 'MGT', grade: 'M3', years: 13, perf: 'B', perfScore: 85, potential: 'MID', grid: '9B2', salary: 50000, isCorePosition: true, risk: 'LOW', tags: [] },
+  { id: 'E10004', name: '郑霞', deptId: '203', position: '综合管理经理', family: 'M', sequence: 'MGT', grade: 'M2', years: 7, perf: 'B', perfScore: 83, potential: 'MID', grid: '9B2', salary: 32000, isCorePosition: false, risk: 'LOW', tags: [] },
+
+  // ---- 部门经理 ----
+  { id: 'E10020', name: '王建国', deptId: '305', position: '软件研发经理', family: 'M', sequence: 'MGT', grade: 'M2', years: 9, perf: 'A', perfScore: 90, potential: 'MID', grid: '9A2', salary: 55000, isCorePosition: true, risk: 'LOW', tags: ['认证小组成员'] },
+  { id: 'E10030', name: '赵磊', deptId: '306', position: '机械设计经理', family: 'M', sequence: 'MGT', grade: 'M2', years: 8, perf: 'B', perfScore: 84, potential: 'MID', grid: '9B2', salary: 48000, isCorePosition: true, risk: 'LOW', tags: [] },
+  { id: 'E10040', name: '孙鹏', deptId: '307', position: '工艺工程经理', family: 'M', sequence: 'MGT', grade: 'M2', years: 7, perf: 'B', perfScore: 82, potential: 'MID', grid: '9B2', salary: 45000, isCorePosition: true, risk: 'LOW', tags: [] },
+  { id: 'E10051', name: '钱满仓', deptId: '401', position: '机加车间主任', family: 'M', sequence: 'MGT', grade: 'M2', years: 16, perf: 'B', perfScore: 83, potential: 'LOW', grid: '9B3', salary: 40000, isCorePosition: true, risk: 'LOW', tags: ['老师傅'] },
+  { id: 'E10052', name: '周大勇', deptId: '402', position: '装配车间主任', family: 'M', sequence: 'MGT', grade: 'M2', years: 12, perf: 'A', perfScore: 88, potential: 'MID', grid: '9A2', salary: 38000, isCorePosition: true, risk: 'LOW', tags: [] },
+  { id: 'E10053', name: '林晓', deptId: '403', position: '质量经理', family: 'M', sequence: 'MGT', grade: 'M2', years: 8, perf: 'A', perfScore: 87, potential: 'HIGH', grid: '9A1', salary: 42000, isCorePosition: true, risk: 'LOW', tags: [] },
+  { id: 'E10061', name: '吴芳', deptId: '501', position: '采购主管', family: 'O', sequence: 'PUR', grade: 'O3', years: 6, perf: 'B', perfScore: 84, potential: 'MID', grid: '9B2', salary: 26000, isCorePosition: false, risk: 'LOW', tags: [] },
+  { id: 'E10062', name: '蒋涛', deptId: '502', position: '仓储主管', family: 'O', sequence: 'PUR', grade: 'O3', years: 5, perf: 'C', perfScore: 76, potential: 'LOW', grid: '9C3', salary: 22000, isCorePosition: false, risk: 'MID', tags: ['绩效待改进'] },
+  { id: 'E10071', name: '韩雪', deptId: '601', position: '销售经理', family: 'M', sequence: 'MGT', grade: 'M2', years: 7, perf: 'A', perfScore: 90, potential: 'HIGH', grid: '9A1', salary: 45000, isCorePosition: true, risk: 'LOW', tags: [] },
+  { id: 'E10072', name: '罗琳', deptId: '602', position: '市场经理', family: 'O', sequence: 'SAL', grade: 'O3', years: 6, perf: 'B', perfScore: 85, potential: 'MID', grid: '9B2', salary: 30000, isCorePosition: false, risk: 'LOW', tags: [] },
+
+  // ---- 软件研发部（哑铃型：新人多、中坚少） ----
+  { id: 'E10087', name: '陈昊', deptId: '305', position: '高级软件工程师', family: 'P', sequence: 'SW', grade: 'P4', years: 7, perf: 'A', perfScore: 92, potential: 'HIGH', grid: '9A1', salary: 36000, isCorePosition: true, risk: 'LOW', tags: ['重点培养', 'B 角'] },
+  { id: 'E10088', name: '刘洋', deptId: '305', position: '高级软件工程师', family: 'P', sequence: 'SW', grade: 'P4', years: 8, perf: 'A', perfScore: 89, potential: 'LOW', grid: '9A3', salary: 34000, isCorePosition: true, risk: 'LOW', tags: ['留用激励'] },
+  { id: 'E10086', name: '林一凡', deptId: '305', position: '软件工程师', family: 'P', sequence: 'SW', grade: 'P3', years: 4, perf: 'B', perfScore: 84, potential: 'HIGH', grid: '9B1', salary: 23000, isCorePosition: false, risk: 'LOW', tags: ['P4 认证中', 'IDP 执行中'] },
+  { id: 'E10092', name: '冯雪', deptId: '305', position: '软件工程师', family: 'P', sequence: 'SW', grade: 'P3', years: 5, perf: 'S', perfScore: 96, potential: 'HIGH', grid: '9A1', salary: 27000, isCorePosition: false, risk: 'MID', tags: ['明星员工'] },
+  { id: 'E10093', name: '许文', deptId: '305', position: '软件工程师', family: 'P', sequence: 'SW', grade: 'P3', years: 6, perf: 'C', perfScore: 74, potential: 'LOW', grid: '9C3', salary: 20000, isCorePosition: false, risk: 'HIGH', tags: ['绩效改进', '离职风险'] },
+  { id: 'E10089', name: '黄敏', deptId: '305', position: '初级软件工程师', family: 'P', sequence: 'SW', grade: 'P2', years: 2, perf: 'C', perfScore: 75, potential: 'MID', grid: '9C2', salary: 14000, isCorePosition: false, risk: 'MID', tags: ['补知识'] },
+  { id: 'E10091', name: '郑凯', deptId: '305', position: '初级软件工程师', family: 'P', sequence: 'SW', grade: 'P2', years: 1, perf: 'B', perfScore: 83, potential: 'HIGH', grid: '9B1', salary: 15000, isCorePosition: false, risk: 'LOW', tags: ['新人'] },
+  { id: 'E10094', name: '邓超', deptId: '305', position: '初级软件工程师', family: 'P', sequence: 'SW', grade: 'P2', years: 2, perf: 'A', perfScore: 88, potential: 'HIGH', grid: '9A1', salary: 16000, isCorePosition: false, risk: 'LOW', tags: ['梯队候选'] },
+
+  // ---- 机械设计部 ----
+  { id: 'E10101', name: '宋佳', deptId: '306', position: '高级机械工程师', family: 'P', sequence: 'ENG', grade: 'P4', years: 9, perf: 'S', perfScore: 97, potential: 'HIGH', grid: '9A1', salary: 38000, isCorePosition: true, risk: 'MID', tags: ['核心人才', '继任候选'] },
+  { id: 'E10102', name: '谢军', deptId: '306', position: '高级机械工程师', family: 'P', sequence: 'ENG', grade: 'P4', years: 10, perf: 'B', perfScore: 82, potential: 'LOW', grid: '9B3', salary: 33000, isCorePosition: true, risk: 'LOW', tags: [] },
+  { id: 'E10104', name: '曹阳', deptId: '306', position: '机械工程师', family: 'P', sequence: 'ENG', grade: 'P3', years: 4, perf: 'A', perfScore: 89, potential: 'HIGH', grid: '9A1', salary: 26000, isCorePosition: false, risk: 'MID', tags: ['B 角'] },
+  { id: 'E10103', name: '唐璐', deptId: '306', position: '机械工程师', family: 'P', sequence: 'ENG', grade: 'P3', years: 3, perf: 'B', perfScore: 84, potential: 'MID', grid: '9B2', salary: 24000, isCorePosition: false, risk: 'LOW', tags: [] },
+
+  // ---- 工艺 / 制造 / 质量（菱形结构：T3-T4 为主） ----
+  { id: 'E10111', name: '董浩', deptId: '307', position: '高级工艺工程师', family: 'T', sequence: 'OP', grade: 'T4', years: 8, perf: 'A', perfScore: 90, potential: 'HIGH', grid: '9A1', salary: 31000, isCorePosition: true, risk: 'LOW', tags: ['继任候选'] },
+  { id: 'E10112', name: '袁莉', deptId: '307', position: '工艺工程师', family: 'T', sequence: 'OP', grade: 'T3', years: 4, perf: 'B', perfScore: 85, potential: 'MID', grid: '9B2', salary: 21000, isCorePosition: false, risk: 'LOW', tags: [] },
+  { id: 'E10121', name: '范进', deptId: '401', position: '高级数控技师', family: 'T', sequence: 'OP', grade: 'T4', years: 10, perf: 'B', perfScore: 84, potential: 'MID', grid: '9B2', salary: 30000, isCorePosition: true, risk: 'LOW', tags: ['AB 角'] },
+  { id: 'E10122', name: '钟志强', deptId: '401', position: '数控技师', family: 'T', sequence: 'OP', grade: 'T3', years: 5, perf: 'B', perfScore: 82, potential: 'LOW', grid: '9B3', salary: 19000, isCorePosition: false, risk: 'LOW', tags: [] },
+  { id: 'E10123', name: '田晓梅', deptId: '401', position: '数控技师', family: 'T', sequence: 'OP', grade: 'T3', years: 6, perf: 'A', perfScore: 88, potential: 'MID', grid: '9A2', salary: 22000, isCorePosition: false, risk: 'LOW', tags: [] },
+  { id: 'E10131', name: '潘秀', deptId: '402', position: '装配技师', family: 'T', sequence: 'OP', grade: 'T2', years: 3, perf: 'B', perfScore: 83, potential: 'MID', grid: '9B2', salary: 12000, isCorePosition: false, risk: 'LOW', tags: [] },
+  { id: 'E10132', name: '余建设', deptId: '402', position: '装配技师', family: 'T', sequence: 'OP', grade: 'T2', years: 4, perf: 'C', perfScore: 74, potential: 'LOW', grid: '9C3', salary: 11000, isCorePosition: false, risk: 'HIGH', tags: ['过程监督'] },
+  { id: 'E10141', name: '汪晴', deptId: '403', position: '质量工程师', family: 'T', sequence: 'OP', grade: 'T3', years: 5, perf: 'A', perfScore: 89, potential: 'HIGH', grid: '9A1', salary: 23000, isCorePosition: false, risk: 'LOW', tags: [] },
+
+  // ---- 采购 / 销售 / HR / IT ----
+  { id: 'E10151', name: '朱莉', deptId: '501', position: '采购专员', family: 'O', sequence: 'PUR', grade: 'O3', years: 4, perf: 'B', perfScore: 84, potential: 'MID', grid: '9B2', salary: 18000, isCorePosition: false, risk: 'LOW', tags: [] },
+  { id: 'E10161', name: '秦朗', deptId: '601', position: '大客户经理', family: 'S', sequence: 'SAL', grade: 'S3', years: 7, perf: 'S', perfScore: 98, potential: 'HIGH', grid: '9A1', salary: 40000, isCorePosition: true, risk: 'LOW', tags: ['销冠', '核心人才'] },
+  { id: 'E10162', name: '白玲', deptId: '601', position: '大客户经理', family: 'S', sequence: 'SAL', grade: 'S3', years: 5, perf: 'B', perfScore: 85, potential: 'MID', grid: '9B2', salary: 28000, isCorePosition: false, risk: 'LOW', tags: [] },
+  { id: 'E10171', name: '孟晓', deptId: '201', position: 'HRBP', family: 'O', sequence: 'HR', grade: 'O3', years: 3, perf: 'B', perfScore: 84, potential: 'MID', grid: '9B2', salary: 17000, isCorePosition: false, risk: 'LOW', tags: [] },
+  { id: 'E10090', name: '陈曦', deptId: '203', position: 'IT 运维专员', family: 'O', sequence: 'OPS', grade: 'O3', years: 4, perf: 'B', perfScore: 85, potential: 'MID', grid: '9B2', salary: 19000, isCorePosition: false, risk: 'LOW', tags: ['系统管理员'] },
+];
+
+export const personas: Persona[] = [
+  {
+    id: 'lin',
+    employeeId: 'E10086',
+    name: '林一凡',
+    title: '软件工程师 · P3',
+    roles: ['employee'],
+    defaultRole: 'employee',
+    tenantId: 't_huali',
+    tenantName: '华砺精工',
+    blurb: '正在准备 P4 晋升认证，想看清差距与学习路径',
+  },
+  {
+    id: 'wang',
+    employeeId: 'E10020',
+    name: '王建国',
+    title: '软件研发经理 · M2',
+    roles: ['manager', 'cert_panel'],
+    defaultRole: 'manager',
+    tenantId: 't_huali',
+    tenantName: '华砺精工',
+    blurb: '带 20 人研发团队，负责审批与认证小组评审',
+  },
+  {
+    id: 'zhou',
+    employeeId: 'E10002',
+    name: '周敏',
+    title: 'HRD · M3',
+    roles: ['hr', 'committee'],
+    defaultRole: 'hr',
+    tenantId: 't_huali',
+    tenantName: '华砺精工',
+    blurb: '运营标准、盘点与调薪，管委会终审成员',
+  },
+  {
+    id: 'zhang',
+    employeeId: 'E10001',
+    name: '张澜',
+    title: '首席执行官',
+    roles: ['exec'],
+    defaultRole: 'exec',
+    tenantId: 't_huali',
+    tenantName: '华砺精工',
+    blurb: '看三张图做人才决策，审批调薪与盘点',
+  },
+  {
+    id: 'chen',
+    employeeId: 'E10090',
+    name: '陈曦',
+    title: '租户管理员 · IT',
+    roles: ['tenant_admin'],
+    defaultRole: 'tenant_admin',
+    tenantId: 't_huali',
+    tenantName: '华砺精工',
+    blurb: '管理配置中心、模板与用量，维护本租户',
+  },
+  {
+    id: 'platform',
+    name: '平台运维',
+    title: '平台管理员',
+    roles: ['platform_admin'],
+    defaultRole: 'platform_admin',
+    tenantId: 'platform',
+    tenantName: 'SaaS 平台运营',
+    blurb: '开通/封禁租户、模板上架、平台用量账单（不可见员工明文）',
+  },
+];
+
+export function employeeById(id?: string): Employee | undefined {
+  return employees.find((e) => e.id === id);
+}

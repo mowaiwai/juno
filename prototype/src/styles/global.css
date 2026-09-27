@@ -1,0 +1,122 @@
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--clay-hover);
+  text-decoration: none;
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 页面通用容器 */
+.page {
+  padding: var(--space-page);
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  font-size: var(--text-h1);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.page-subtitle {
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+  margin-top: 6px;
+}
+
+.card-soft {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* AntD 暖纸微调 */
+.ant-table-wrapper .ant-table {
+  background: transparent;
+}
+
+.ant-table-thead > tr > th {
+  background: var(--surface-sunken) !important;
+  color: var(--ink-2) !important;
+  font-weight: 600;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom-color: var(--line) !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: var(--surface-hover) !important;
+}
+
+.ant-card {
+  border-color: var(--line);
+}
+
+.ant-tabs-tab {
+  color: var(--ink-2);
+}
+
+.ant-divider {
+  border-color: var(--line);
+}
+
+::selection {
+  background: var(--clay-soft);
+}
+
+.persona-card:hover {
+  border-color: var(--line-strong) !important;
+  box-shadow: var(--shadow-card);
+  transform: translateY(-2px);
+}
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--ochre-soft);
+  color: var(--ochre);
+  border: 1px solid transparent;
+}
