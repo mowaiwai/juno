@@ -59,6 +59,12 @@ import { Willingness } from '@/pages/Willingness';
 import { TalentPool } from '@/pages/TalentPool';
 import { AbRoles } from '@/pages/AbRoles';
 import { PoolTraining } from '@/pages/PoolTraining';
+// 批次 7 · 工资与调薪
+import { SalaryTable } from '@/pages/SalaryTable';
+import { MarketData } from '@/pages/MarketData';
+import { SalaryPlan } from '@/pages/SalaryPlan';
+import { SalaryApprove } from '@/pages/SalaryApprove';
+import { SalaryReport } from '@/pages/SalaryReport';
 
 export function AppRoutes() {
   return (
@@ -125,6 +131,12 @@ export function AppRoutes() {
           <Route path="talent-pool" element={<TalentPool />} />
           <Route path="ab-roles" element={<AbRoles />} />
           <Route path="pool-training" element={<PoolTraining />} />
+          {/* 批次 7 · 工资与调薪 */}
+          <Route path="salary-table" element={<SalaryTable />} />
+          <Route path="market-data" element={<MarketData />} />
+          <Route path="salary-plan" element={<SalaryPlan />} />
+          <Route path="salary-approve" element={<SalaryApprove />} />
+          <Route path="salary-report" element={<SalaryReport />} />
           <Route path="page/:key" element={<ComingSoon />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

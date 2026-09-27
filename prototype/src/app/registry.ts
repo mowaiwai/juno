@@ -85,11 +85,11 @@ export const pageRegistry: PageMeta[] = [
   { key: 'pool-training', title: '培养跟踪', group: '继任与梯队', batch: 6, roles: ['hr'], depth: '○', done: true },
 
   // ============ 批次 7 · 工资与调薪 ============
-  { key: 'salary-table', title: '等级工资表', group: '薪酬管理', batch: 7, roles: ['hr', 'committee'], depth: '●', done: false },
-  { key: 'market-data', title: '市场分位数据', group: '薪酬管理', batch: 7, roles: ['hr'], depth: '◐', done: false },
-  { key: 'salary-plan', title: '调薪方案建议', group: '薪酬管理', batch: 7, roles: ['hr', 'exec'], depth: '●', done: false },
-  { key: 'salary-approve', title: '调薪审批', group: '薪酬管理', batch: 7, roles: ['exec', 'committee', 'hr'], depth: '●', done: false },
-  { key: 'salary-report', title: '套改汇报材料', group: '薪酬管理', batch: 7, roles: ['hr', 'exec'], depth: '◐', done: false },
+  { key: 'salary-table', title: '等级工资表', group: '薪酬管理', batch: 7, roles: ['hr', 'committee'], depth: '●', done: true },
+  { key: 'market-data', title: '市场分位数据', group: '薪酬管理', batch: 7, roles: ['hr'], depth: '◐', done: true },
+  { key: 'salary-plan', title: '调薪方案建议', group: '薪酬管理', batch: 7, roles: ['hr', 'exec'], depth: '●', done: true },
+  { key: 'salary-approve', title: '调薪审批', group: '薪酬管理', batch: 7, roles: ['exec', 'committee', 'hr'], depth: '●', done: true },
+  { key: 'salary-report', title: '套改汇报材料', group: '薪酬管理', batch: 7, roles: ['hr', 'exec'], depth: '◐', done: true },
 
   // ============ 批次 8 · 其余模块 + SaaS 运营 ============
   { key: 'recruit-board', title: '招聘工作台', group: '招聘与培训', batch: 8, roles: ['hr', 'manager'], depth: '◐', done: false },
