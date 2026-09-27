@@ -39,6 +39,18 @@ import { CockpitQA } from '@/pages/CockpitQA';
 import { StructureViz } from '@/pages/StructureViz';
 import { GapWarning } from '@/pages/GapWarning';
 import { LiquidTeam } from '@/pages/LiquidTeam';
+// 批次 5 · 差距 · 发展 · 绩效
+import { GapBoard } from '@/pages/GapBoard';
+import { GapAction } from '@/pages/GapAction';
+import { InitialInventory } from '@/pages/InitialInventory';
+import { LearnMap } from '@/pages/LearnMap';
+import { ExamCenter } from '@/pages/ExamCenter';
+import { ExamTake } from '@/pages/ExamTake';
+import { ExamReview } from '@/pages/ExamReview';
+import { Idp } from '@/pages/Idp';
+import { PerfImport } from '@/pages/PerfImport';
+import { ImprovementBoard } from '@/pages/ImprovementBoard';
+import { Coaching } from '@/pages/Coaching';
 
 export function AppRoutes() {
   return (
@@ -85,6 +97,18 @@ export function AppRoutes() {
           <Route path="structure-viz" element={<StructureViz />} />
           <Route path="gap-warning" element={<GapWarning />} />
           <Route path="liquid-team" element={<LiquidTeam />} />
+          {/* 批次 5 · 差距 · 发展 · 绩效 */}
+          <Route path="gap-board" element={<GapBoard />} />
+          <Route path="gap-action" element={<GapAction />} />
+          <Route path="initial-inventory" element={<InitialInventory />} />
+          <Route path="learn-map" element={<LearnMap />} />
+          <Route path="exam-center" element={<ExamCenter />} />
+          <Route path="exam-take" element={<ExamTake />} />
+          <Route path="exam-review" element={<ExamReview />} />
+          <Route path="idp" element={<Idp />} />
+          <Route path="perf-import" element={<PerfImport />} />
+          <Route path="improvement-board" element={<ImprovementBoard />} />
+          <Route path="coaching" element={<Coaching />} />
           <Route path="page/:key" element={<ComingSoon />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

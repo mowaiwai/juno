@@ -63,17 +63,17 @@ export const pageRegistry: PageMeta[] = [
   { key: 'liquid-team', title: '液态组队', group: '人才盘点', batch: 4, roles: ['hr', 'manager', 'exec'], depth: '◐', done: true },
 
   // ============ 批次 5 · 差距 · 发展 · 绩效 ============
-  { key: 'gap-board', title: '差距分析看板', group: '人岗匹配', batch: 5, roles: ['manager', 'hr', 'exec'], depth: '●', done: false },
-  { key: 'gap-action', title: '差距详情与动作路由', group: '人岗匹配', batch: 5, roles: ['manager', 'hr'], depth: '●', done: false },
-  { key: 'initial-inventory', title: '人才初盘', group: '人岗匹配', batch: 5, roles: ['hr'], depth: '◐', done: false },
-  { key: 'learn-map', title: '学习地图', group: '人才发展', batch: 5, roles: ['employee', 'hr'], depth: '◐', done: false },
-  { key: 'exam-center', title: '考试中心', group: '人才发展', batch: 5, roles: ['employee', 'hr'], depth: '◐', done: false },
-  { key: 'exam-take', title: '在线答题', group: '人才发展', batch: 5, roles: ['employee'], depth: '●', done: false },
-  { key: 'exam-review', title: 'AI 组卷审核', group: '人才发展', batch: 5, roles: ['hr'], depth: '●', done: false },
-  { key: 'idp', title: 'IDP 个人发展计划', group: '人才发展', batch: 5, roles: ['employee', 'manager', 'hr'], depth: '●', done: false },
-  { key: 'perf-import', title: '绩效结果导入', group: '绩效改进', batch: 5, roles: ['hr'], depth: '●', done: false },
-  { key: 'improvement-board', title: '改进计划看板', group: '绩效改进', batch: 5, roles: ['manager', 'hr'], depth: '◐', done: false },
-  { key: 'coaching', title: '辅导与效果回看', group: '绩效改进', batch: 5, roles: ['manager', 'hr'], depth: '◐', done: false },
+  { key: 'gap-board', title: '差距分析看板', group: '人岗匹配', batch: 5, roles: ['manager', 'hr', 'exec'], depth: '●', done: true },
+  { key: 'gap-action', title: '差距详情与动作路由', group: '人岗匹配', batch: 5, roles: ['manager', 'hr'], depth: '●', done: true },
+  { key: 'initial-inventory', title: '人才初盘', group: '人岗匹配', batch: 5, roles: ['hr'], depth: '◐', done: true },
+  { key: 'learn-map', title: '学习地图', group: '人才发展', batch: 5, roles: ['employee', 'hr'], depth: '◐', done: true },
+  { key: 'exam-center', title: '考试中心', group: '人才发展', batch: 5, roles: ['employee', 'hr'], depth: '◐', done: true },
+  { key: 'exam-take', title: '在线答题', group: '人才发展', batch: 5, roles: ['employee'], depth: '●', done: true },
+  { key: 'exam-review', title: 'AI 组卷审核', group: '人才发展', batch: 5, roles: ['hr'], depth: '●', done: true },
+  { key: 'idp', title: 'IDP 个人发展计划', group: '人才发展', batch: 5, roles: ['employee', 'manager', 'hr'], depth: '●', done: true },
+  { key: 'perf-import', title: '绩效结果导入', group: '绩效改进', batch: 5, roles: ['hr'], depth: '●', done: true },
+  { key: 'improvement-board', title: '改进计划看板', group: '绩效改进', batch: 5, roles: ['manager', 'hr'], depth: '◐', done: true },
+  { key: 'coaching', title: '辅导与效果回看', group: '绩效改进', batch: 5, roles: ['manager', 'hr'], depth: '◐', done: true },
 
   // ============ 批次 6 · 继任与梯队 ============
   { key: 'core-positions', title: '核心岗位清单', group: '继任与梯队', batch: 6, roles: ['hr', 'exec'], depth: '◐', done: false },
