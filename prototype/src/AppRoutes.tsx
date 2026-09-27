@@ -51,6 +51,14 @@ import { Idp } from '@/pages/Idp';
 import { PerfImport } from '@/pages/PerfImport';
 import { ImprovementBoard } from '@/pages/ImprovementBoard';
 import { Coaching } from '@/pages/Coaching';
+// 批次 6 · 继任与梯队
+import { CorePositions } from '@/pages/CorePositions';
+import { SuccessionMatrix } from '@/pages/SuccessionMatrix';
+import { RiskWarning } from '@/pages/RiskWarning';
+import { Willingness } from '@/pages/Willingness';
+import { TalentPool } from '@/pages/TalentPool';
+import { AbRoles } from '@/pages/AbRoles';
+import { PoolTraining } from '@/pages/PoolTraining';
 
 export function AppRoutes() {
   return (
@@ -109,6 +117,14 @@ export function AppRoutes() {
           <Route path="perf-import" element={<PerfImport />} />
           <Route path="improvement-board" element={<ImprovementBoard />} />
           <Route path="coaching" element={<Coaching />} />
+          {/* 批次 6 · 继任与梯队 */}
+          <Route path="core-positions" element={<CorePositions />} />
+          <Route path="succession-matrix" element={<SuccessionMatrix />} />
+          <Route path="risk-warning" element={<RiskWarning />} />
+          <Route path="willingness" element={<Willingness />} />
+          <Route path="talent-pool" element={<TalentPool />} />
+          <Route path="ab-roles" element={<AbRoles />} />
+          <Route path="pool-training" element={<PoolTraining />} />
           <Route path="page/:key" element={<ComingSoon />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

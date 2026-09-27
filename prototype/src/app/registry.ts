@@ -76,13 +76,13 @@ export const pageRegistry: PageMeta[] = [
   { key: 'coaching', title: '辅导与效果回看', group: '绩效改进', batch: 5, roles: ['manager', 'hr'], depth: '◐', done: true },
 
   // ============ 批次 6 · 继任与梯队 ============
-  { key: 'core-positions', title: '核心岗位清单', group: '继任与梯队', batch: 6, roles: ['hr', 'exec'], depth: '◐', done: false },
-  { key: 'succession-matrix', title: '继任矩阵图谱', group: '继任与梯队', batch: 6, roles: ['hr', 'exec'], depth: '●', done: false },
-  { key: 'risk-warning', title: '离职风险预警', group: '继任与梯队', batch: 6, roles: ['hr', 'exec'], depth: '●', done: false },
-  { key: 'willingness', title: '意愿确认', group: '继任与梯队', batch: 6, roles: ['hr', 'manager'], depth: '●', done: false },
-  { key: 'talent-pool', title: '梯队池管理', group: '继任与梯队', batch: 6, roles: ['hr'], depth: '◐', done: false },
-  { key: 'ab-roles', title: 'AB 角配置', group: '继任与梯队', batch: 6, roles: ['hr', 'manager'], depth: '◐', done: false },
-  { key: 'pool-training', title: '培养跟踪', group: '继任与梯队', batch: 6, roles: ['hr'], depth: '○', done: false },
+  { key: 'core-positions', title: '核心岗位清单', group: '继任与梯队', batch: 6, roles: ['hr', 'exec'], depth: '◐', done: true },
+  { key: 'succession-matrix', title: '继任矩阵图谱', group: '继任与梯队', batch: 6, roles: ['hr', 'exec'], depth: '●', done: true },
+  { key: 'risk-warning', title: '离职风险预警', group: '继任与梯队', batch: 6, roles: ['hr', 'exec'], depth: '●', done: true },
+  { key: 'willingness', title: '意愿确认', group: '继任与梯队', batch: 6, roles: ['hr', 'manager'], depth: '●', done: true },
+  { key: 'talent-pool', title: '梯队池管理', group: '继任与梯队', batch: 6, roles: ['hr'], depth: '◐', done: true },
+  { key: 'ab-roles', title: 'AB 角配置', group: '继任与梯队', batch: 6, roles: ['hr', 'manager'], depth: '◐', done: true },
+  { key: 'pool-training', title: '培养跟踪', group: '继任与梯队', batch: 6, roles: ['hr'], depth: '○', done: true },
 
   // ============ 批次 7 · 工资与调薪 ============
   { key: 'salary-table', title: '等级工资表', group: '薪酬管理', batch: 7, roles: ['hr', 'committee'], depth: '●', done: false },
