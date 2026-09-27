@@ -34,7 +34,7 @@ export function WsPlatform() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-serif">平台管理员工作台</h1>
-          <div className="page-subtitle">华砺人才平台 · 租户、收入与模板运营（不可见员工明文）</div>
+          <div className="page-subtitle">Juno 平台 · 租户、收入与模板运营（不可见员工明文）</div>
         </div>
       </div>
 

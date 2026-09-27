@@ -91,14 +91,14 @@ export function AppLayout() {
               color: 'var(--paper)',
               display: 'grid',
               placeItems: 'center',
-              fontSize: 14,
-              fontFamily: 'var(--font-serif)',
+              fontSize: 15,
+              fontWeight: 700,
             }}
           >
-            砺
+            J
           </div>
           <div style={{ lineHeight: 1.2 }}>
-            <div style={{ fontWeight: 650, fontSize: 14 }}>华砺人才</div>
+            <div style={{ fontWeight: 750, fontSize: 16, letterSpacing: '-0.01em' }}>Juno</div>
             <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>
               AI+HR 智能体
             </div>
