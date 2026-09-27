@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Layout, Menu, Avatar, Button } from 'antd';
 import { useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { LogoutOutlined } from '@ant-design/icons';
@@ -31,6 +31,12 @@ export function AppLayout() {
   const logout = useAuth((s) => s.logout);
   const navigate = useNavigate();
   const location = useLocation();
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // 路由切换时内容区滚动复位
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0 });
+  }, [location.pathname]);
 
   const menuItems = useMemo(() => {
     if (!activeRole) return [];
@@ -156,7 +162,7 @@ export function AppLayout() {
             />
           </div>
         </Header>
-        <Content style={{ overflow: 'auto' }}>
+        <Content ref={contentRef} style={{ overflow: 'auto' }}>
           <Outlet />
         </Content>
       </Layout>

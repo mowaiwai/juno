@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Drawer, Button, Tag, message, Empty } from 'antd';
+import { Drawer, Button, Tag, message } from 'antd';
 import { AppstoreOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { pageRegistry } from '@/app/registry';
@@ -161,10 +161,32 @@ export function PrototypePanel() {
             </div>
           );
         })}
-        <Empty
-          description="批次 9 为打磨交付，无新增页面"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-        />
+        <div
+          style={{
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--radius)',
+            background: 'var(--sage-soft)',
+            padding: 16,
+          }}
+        >
+          <div style={{ fontWeight: 650, marginBottom: 6 }}>
+            全部 9 个批次交付完成
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 10 }}>
+            66 个业务页面 + 2 个开发辅助页，六类角色视角均可点击遍历；所有数据为虚拟样本。
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Tag style={{ margin: 0, borderRadius: 6, background: 'var(--surface)', borderColor: 'transparent' }}>
+              React 18 + Vite
+            </Tag>
+            <Tag style={{ margin: 0, borderRadius: 6, background: 'var(--surface)', borderColor: 'transparent' }}>
+              Ant Design 5
+            </Tag>
+            <Tag style={{ margin: 0, borderRadius: 6, background: 'var(--surface)', borderColor: 'transparent' }}>
+              ECharts
+            </Tag>
+          </div>
+        </div>
       </Drawer>
     </>
   );

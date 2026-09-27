@@ -48,7 +48,7 @@ export function Login() {
           <span style={{ fontWeight: 650 }}>华砺人才 · AI+HR 智能体系统</span>
         </div>
         <Tag style={{ borderRadius: 6, color: 'var(--ink-3)' }}>
-          高保真可点击原型 · 数据均为虚拟
+          高保真可点击原型 · 66 页全部交付 · 数据均为虚拟
         </Tag>
       </header>
 
