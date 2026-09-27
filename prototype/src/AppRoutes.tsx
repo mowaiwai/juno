@@ -82,7 +82,7 @@ import { SciBackground } from '@/components/SciBackground';
 
 export function AppRoutes() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <SciBackground />
       <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}>
         <Routes>
