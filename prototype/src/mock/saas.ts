@@ -75,7 +75,7 @@ export const aiUsageRows: AiUsageRow[] = [
   { id: 'AU03', time: '2026-09-26 16:05', scene: '归因', model: '豆包-pro', inputTokens: 15600, outputTokens: 5800, cost: 0.124, operator: '系统自动（盘点校准）' },
   { id: 'AU04', time: '2026-09-26 14:22', scene: '画像', model: '智谱 GLM-4', inputTokens: 21000, outputTokens: 6400, cost: 0.198, operator: '系统自动（画像引擎）' },
   { id: 'AU05', time: '2026-09-25 11:30', scene: '预审', model: '豆包-pro', inputTokens: 9800, outputTokens: 2600, cost: 0.071, operator: '温晚晴 · 认证材料预审' },
-  { id: 'AU06', time: '2026-09-25 10:02', scene: 'IDP', model: '通义-plus', inputTokens: 7600, outputTokens: 3900, cost: 0.064, operator: '许云清 · IDP 建议' },
+  { id: 'AU06', time: '2026-09-25 10:02', scene: 'IDP', model: '通义-plus', inputTokens: 7600, outputTokens: 3900, cost: 0.064, operator: '许星遥 · IDP 建议' },
   { id: 'AU07', time: '2026-09-24 17:48', scene: '出题', model: '智谱 GLM-4', inputTokens: 11200, outputTokens: 5100, cost: 0.118, operator: '系统自动（灰度 30%）' },
   { id: 'AU08', time: '2026-09-24 15:10', scene: '归因', model: '豆包-pro', inputTokens: 14300, outputTokens: 4900, cost: 0.109, operator: '系统自动（绩效归因）' },
 ];

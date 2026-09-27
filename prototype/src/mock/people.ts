@@ -26,7 +26,7 @@ export const employees: Employee[] = [
   // ---- 软件研发部（哑铃型：新人多、中坚少） ----
   { id: 'E10087', name: '顾屿白', deptId: '305', position: '高级软件工程师', family: 'P', sequence: 'SW', grade: 'P4', years: 7, perf: 'A', perfScore: 92, potential: 'HIGH', grid: '9A1', salary: 36000, isCorePosition: true, risk: 'LOW', tags: ['重点培养', 'B 角'] },
   { id: 'E10088', name: '彭清樾', deptId: '305', position: '高级软件工程师', family: 'P', sequence: 'SW', grade: 'P4', years: 8, perf: 'A', perfScore: 89, potential: 'LOW', grid: '9A3', salary: 34000, isCorePosition: true, risk: 'LOW', tags: ['留用激励'] },
-  { id: 'E10086', name: '许云清', deptId: '305', position: '软件工程师', family: 'P', sequence: 'SW', grade: 'P3', years: 4, perf: 'B', perfScore: 84, potential: 'HIGH', grid: '9B1', salary: 23000, isCorePosition: false, risk: 'LOW', tags: ['P4 认证中', 'IDP 执行中'] },
+  { id: 'E10086', name: '许星遥', deptId: '305', position: '软件工程师', family: 'P', sequence: 'SW', grade: 'P3', years: 4, perf: 'B', perfScore: 84, potential: 'HIGH', grid: '9B1', salary: 23000, isCorePosition: false, risk: 'LOW', tags: ['P4 认证中', 'IDP 执行中'] },
   { id: 'E10092', name: '温以宁', deptId: '305', position: '软件工程师', family: 'P', sequence: 'SW', grade: 'P3', years: 5, perf: 'S', perfScore: 96, potential: 'HIGH', grid: '9A1', salary: 27000, isCorePosition: false, risk: 'MID', tags: ['明星员工'] },
   { id: 'E10093', name: '董斯年', deptId: '305', position: '软件工程师', family: 'P', sequence: 'SW', grade: 'P3', years: 6, perf: 'C', perfScore: 74, potential: 'LOW', grid: '9C3', salary: 20000, isCorePosition: false, risk: 'HIGH', tags: ['绩效改进', '离职风险'] },
   { id: 'E10089', name: '曹沐辰', deptId: '305', position: '初级软件工程师', family: 'P', sequence: 'SW', grade: 'P2', years: 2, perf: 'C', perfScore: 75, potential: 'MID', grid: '9C2', salary: 14000, isCorePosition: false, risk: 'MID', tags: ['补知识'] },
@@ -61,7 +61,7 @@ export const personas: Persona[] = [
   {
     id: 'lin',
     employeeId: 'E10086',
-    name: '许云清',
+    name: '许星遥',
     title: '软件工程师 · P3',
     roles: ['employee'],
     defaultRole: 'employee',

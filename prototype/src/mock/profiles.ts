@@ -48,7 +48,7 @@ function d(score: number, note: string): DimScore {
   };
 }
 
-/** 主剧本：许云清（三个版本，供画像对比） */
+/** 主剧本：许星遥（三个版本，供画像对比） */
 const LIN_VERSIONS: ProfileSnapshot[] = [
   {
     employeeId: 'E10086',
@@ -66,7 +66,7 @@ const LIN_VERSIONS: ProfileSnapshot[] = [
       perf: d(78, '年度 B+'),
     },
     summary:
-      '许云清处于 P2→P3 成长期：执行可靠、协同口碑好，短板集中在分布式知识与跨模块系统思维。建议以「补知识 + 带教参与」作为下年度主线。',
+      '许星遥处于 P2→P3 成长期：执行可靠、协同口碑好，短板集中在分布式知识与跨模块系统思维。建议以「补知识 + 带教参与」作为下年度主线。',
   },
   {
     employeeId: 'E10086',

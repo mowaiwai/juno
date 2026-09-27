@@ -222,7 +222,7 @@ export const poolMembers: PoolMember[] = [
   { employeeId: 'E10002', name: '温晚晴', position: 'HRD', level: 'L1', reason: '高潜+高管级绩效，管委会认可', joinedAt: '2025-01-10', status: 'active' },
   { employeeId: 'E10020', name: '陆行舟', position: '软件研发经理', level: 'L1', reason: '研发中坚，管理潜力突出', joinedAt: '2025-03-15', status: 'active' },
   { employeeId: 'E10087', name: '顾屿白', position: '高级软件工程师', level: 'L1', reason: 'P4 核心，技术深度+领导力', joinedAt: '2025-06-01', status: 'active' },
-  { employeeId: 'E10086', name: '许云清', position: '软件工程师', level: 'L2', reason: '高潜，P3→P4 成长中', joinedAt: '2026-01-10', status: 'active' },
+  { employeeId: 'E10086', name: '许星遥', position: '软件工程师', level: 'L2', reason: '高潜，P3→P4 成长中', joinedAt: '2026-01-10', status: 'active' },
   { employeeId: 'E10093', name: '温以宁', position: '软件工程师', level: 'L2', reason: '绩效 A，系统思维强', joinedAt: '2026-02-20', status: 'active' },
   { employeeId: 'E10161', name: '秦越', position: '大客户经理', level: 'L2', reason: '销冠，客户资源丰富', joinedAt: '2026-03-01', status: 'active' },
   { employeeId: 'E10092', name: '许言蹊', position: '软件工程师', level: 'L3', reason: '潜力中，绩效稳定', joinedAt: '2026-05-10', status: 'active' },
@@ -269,7 +269,7 @@ export interface PoolTraining {
 }
 
 export const poolTrainings: PoolTraining[] = [
-  { id: 'pt1', employeeId: 'E10086', employeeName: '许云清', level: 'L2', program: 'P4 晋升加速营', startDate: '2026-07-01', endDate: '2026-12-31', progress: 60, status: 'doing', mentor: '顾屿白' },
+  { id: 'pt1', employeeId: 'E10086', employeeName: '许星遥', level: 'L2', program: 'P4 晋升加速营', startDate: '2026-07-01', endDate: '2026-12-31', progress: 60, status: 'doing', mentor: '顾屿白' },
   { id: 'pt2', employeeId: 'E10093', employeeName: '温以宁', level: 'L2', program: '系统思维训练营', startDate: '2026-08-01', endDate: '2026-11-30', progress: 40, status: 'doing', mentor: '陆行舟' },
   { id: 'pt3', employeeId: 'E10087', employeeName: '顾屿白', level: 'L1', program: '管理者转身项目', startDate: '2026-06-01', endDate: '2026-12-31', progress: 75, status: 'doing', mentor: '江予安' },
   { id: 'pt4', employeeId: 'E10161', employeeName: '秦越', level: 'L2', program: '销售管理者培养', startDate: '2026-05-01', endDate: '2026-10-31', progress: 100, status: 'done', mentor: '温既白' },

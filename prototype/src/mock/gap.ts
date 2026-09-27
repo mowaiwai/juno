@@ -184,15 +184,15 @@ export interface ImprovementPlan {
 export const improvementPlans: ImprovementPlan[] = [
   {
     id: 'ip_001', gapId: 'E10086_perf', employeeId: 'E10086',
-    title: '许云清业绩提升计划', action: 'perf_improvement',
+    title: '许星遥业绩提升计划', action: 'perf_improvement',
     status: 'running', startDate: '2026-07-01', endDate: '2026-09-30',
-    progress: 60, owner: '许云清', manager: '陆行舟',
+    progress: 60, owner: '许星遥', manager: '陆行舟',
   },
   {
     id: 'ip_002', gapId: 'E10086_knowledge', employeeId: 'E10086',
-    title: '许云清分布式知识补强', action: 'learn_knowledge',
+    title: '许星遥分布式知识补强', action: 'learn_knowledge',
     status: 'running', startDate: '2026-07-15', endDate: '2026-10-15',
-    progress: 45, owner: '许云清', manager: '陆行舟',
+    progress: 45, owner: '许星遥', manager: '陆行舟',
   },
   {
     id: 'ip_003', gapId: 'E10051_duty', employeeId: 'E10051',

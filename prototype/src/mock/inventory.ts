@@ -309,7 +309,7 @@ export const gapWarnings: GapWarning[] = [
     incumbentName: '顾屿白',
     level: 'HIGH',
     reason: '核心岗位 4 个编制，目前仅 2 人在岗（顾屿白、彭清樾）；中坚 P3→P4 通过率不足，且 1 人有 MID 流失风险',
-    suggestion: '加速 P3→P4 认证（许云清/温以宁）；启动外部招聘；对顾屿白启动保留面谈',
+    suggestion: '加速 P3→P4 认证（许星遥/温以宁）；启动外部招聘；对顾屿白启动保留面谈',
   },
   {
     positionId: 'p001',

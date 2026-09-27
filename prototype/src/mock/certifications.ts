@@ -1,5 +1,5 @@
 /**
- * 认证主链 mock —— 剧本：许云清 SW-P3 → P4 认证（管委会路由）。
+ * 认证主链 mock —— 剧本：许星遥 SW-P3 → P4 认证（管委会路由）。
  * 状态机与路由规则对齐 PRD「认证与盘点状态机」：
  * P1→P2 部门经理单审 / P2→P3 认证小组表决 / P3→P4·P4→P5 管委会终审。
  */
@@ -275,7 +275,7 @@ export const certifications: CertRecord[] = [
   },
 ];
 
-/** 许云清历史认证记录（供「我的认证」页） */
+/** 许星遥历史认证记录（供「我的认证」页） */
 export const certHistory: {
   employeeId: string;
   id: string;
