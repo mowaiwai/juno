@@ -65,6 +65,19 @@ import { MarketData } from '@/pages/MarketData';
 import { SalaryPlan } from '@/pages/SalaryPlan';
 import { SalaryApprove } from '@/pages/SalaryApprove';
 import { SalaryReport } from '@/pages/SalaryReport';
+// 批次 8 · 其余模块 + SaaS 运营
+import { RecruitBoard } from '@/pages/RecruitBoard';
+import { InterviewBank } from '@/pages/InterviewBank';
+import { TrainingAdmin } from '@/pages/TrainingAdmin';
+import { KnowledgeBase } from '@/pages/KnowledgeBase';
+import { ConfigCenter } from '@/pages/ConfigCenter';
+import { TemplateMarket } from '@/pages/TemplateMarket';
+import { AiUsage } from '@/pages/AiUsage';
+import { Billing } from '@/pages/Billing';
+import { PlatformTenants } from '@/pages/PlatformTenants';
+import { PlatformBoard } from '@/pages/PlatformBoard';
+import { WsTenant } from '@/pages/WsTenant';
+import { WsPlatform } from '@/pages/WsPlatform';
 
 export function AppRoutes() {
   return (
@@ -137,6 +150,19 @@ export function AppRoutes() {
           <Route path="salary-plan" element={<SalaryPlan />} />
           <Route path="salary-approve" element={<SalaryApprove />} />
           <Route path="salary-report" element={<SalaryReport />} />
+          {/* 批次 8 · 其余模块 + SaaS 运营 */}
+          <Route path="recruit-board" element={<RecruitBoard />} />
+          <Route path="interview-bank" element={<InterviewBank />} />
+          <Route path="training-admin" element={<TrainingAdmin />} />
+          <Route path="knowledge-base" element={<KnowledgeBase />} />
+          <Route path="config-center" element={<ConfigCenter />} />
+          <Route path="template-market" element={<TemplateMarket />} />
+          <Route path="ai-usage" element={<AiUsage />} />
+          <Route path="billing" element={<Billing />} />
+          <Route path="platform-tenants" element={<PlatformTenants />} />
+          <Route path="platform-board" element={<PlatformBoard />} />
+          <Route path="ws-tenant" element={<WsTenant />} />
+          <Route path="ws-platform" element={<WsPlatform />} />
           <Route path="page/:key" element={<ComingSoon />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

@@ -92,18 +92,18 @@ export const pageRegistry: PageMeta[] = [
   { key: 'salary-report', title: '套改汇报材料', group: '薪酬管理', batch: 7, roles: ['hr', 'exec'], depth: '◐', done: true },
 
   // ============ 批次 8 · 其余模块 + SaaS 运营 ============
-  { key: 'recruit-board', title: '招聘工作台', group: '招聘与培训', batch: 8, roles: ['hr', 'manager'], depth: '◐', done: false },
-  { key: 'interview-bank', title: '面试题库', group: '招聘与培训', batch: 8, roles: ['hr'], depth: '◐', done: false },
-  { key: 'training-admin', title: '培训管理', group: '招聘与培训', batch: 8, roles: ['hr'], depth: '○', done: false },
-  { key: 'knowledge-base', title: '经验萃取库', group: '招聘与培训', batch: 8, roles: ['hr'], depth: '○', done: false },
-  { key: 'config-center', title: '配置中心', group: 'SaaS 运营', batch: 8, roles: ['tenant_admin', 'hr'], depth: '●', done: false },
-  { key: 'template-market', title: '模板市场', group: 'SaaS 运营', batch: 8, roles: ['tenant_admin', 'hr'], depth: '◐', done: false },
-  { key: 'ai-usage', title: 'AI 用量报表', group: 'SaaS 运营', batch: 8, roles: ['tenant_admin', 'hr'], depth: '◐', done: false },
-  { key: 'billing', title: '套餐与账单', group: 'SaaS 运营', batch: 8, roles: ['tenant_admin'], depth: '○', done: false },
-  { key: 'platform-tenants', title: '租户管理', group: 'SaaS 运营', batch: 8, roles: ['platform_admin'], depth: '◐', done: false },
-  { key: 'platform-board', title: '平台运营看板', group: 'SaaS 运营', batch: 8, roles: ['platform_admin'], depth: '◐', done: false },
-  { key: 'ws-tenant', title: '租户管理员工作台', group: '工作台', batch: 8, roles: ['tenant_admin'], depth: '◐', done: false },
-  { key: 'ws-platform', title: '平台管理员工作台', group: '工作台', batch: 8, roles: ['platform_admin'], depth: '◐', done: false },
+  { key: 'recruit-board', title: '招聘工作台', group: '招聘与培训', batch: 8, roles: ['hr', 'manager'], depth: '◐', done: true },
+  { key: 'interview-bank', title: '面试题库', group: '招聘与培训', batch: 8, roles: ['hr'], depth: '◐', done: true },
+  { key: 'training-admin', title: '培训管理', group: '招聘与培训', batch: 8, roles: ['hr'], depth: '○', done: true },
+  { key: 'knowledge-base', title: '经验萃取库', group: '招聘与培训', batch: 8, roles: ['hr'], depth: '○', done: true },
+  { key: 'config-center', title: '配置中心', group: 'SaaS 运营', batch: 8, roles: ['tenant_admin', 'hr'], depth: '●', done: true },
+  { key: 'template-market', title: '模板市场', group: 'SaaS 运营', batch: 8, roles: ['tenant_admin', 'hr'], depth: '◐', done: true },
+  { key: 'ai-usage', title: 'AI 用量报表', group: 'SaaS 运营', batch: 8, roles: ['tenant_admin', 'hr'], depth: '◐', done: true },
+  { key: 'billing', title: '套餐与账单', group: 'SaaS 运营', batch: 8, roles: ['tenant_admin'], depth: '○', done: true },
+  { key: 'platform-tenants', title: '租户管理', group: 'SaaS 运营', batch: 8, roles: ['platform_admin'], depth: '◐', done: true },
+  { key: 'platform-board', title: '平台运营看板', group: 'SaaS 运营', batch: 8, roles: ['platform_admin'], depth: '◐', done: true },
+  { key: 'ws-tenant', title: '租户管理员工作台', group: '工作台', batch: 8, roles: ['tenant_admin'], depth: '◐', done: true },
+  { key: 'ws-platform', title: '平台管理员工作台', group: '工作台', batch: 8, roles: ['platform_admin'], depth: '◐', done: true },
 ];
 
 export function getPage(key: string): PageMeta | undefined {
