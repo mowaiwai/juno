@@ -24,14 +24,14 @@ export const pageRegistry: PageMeta[] = [
   { key: 'style-guide', title: '样式总览', group: '原型开发', batch: 1, roles: A, depth: '●', done: true, dev: true },
 
   // ============ 批次 2 · 组织与标准 ============
-  { key: 'org-tree', title: '组织架构', group: '组织与标准', batch: 2, roles: ['hr', 'exec', 'manager', 'tenant_admin'], depth: '●', done: false },
-  { key: 'positions', title: '岗位管理', group: '组织与标准', batch: 2, roles: ['hr', 'tenant_admin'], depth: '●', done: false },
-  { key: 'channels', title: '职级通道', group: '组织与标准', batch: 2, roles: ['hr', 'employee', 'manager', 'exec'], depth: '◐', done: false },
-  { key: 'standards-list', title: '任职资格标准库', group: '组织与标准', batch: 2, roles: ['hr', 'committee', 'manager', 'tenant_admin'], depth: '●', done: false },
-  { key: 'standard-detail', title: '标准详情', group: '组织与标准', batch: 2, roles: ['hr', 'committee', 'manager', 'employee'], depth: '●', done: false, note: '基本/履职/知识/能力/贡献 五部分 Tab' },
-  { key: 'standard-versions', title: '版本与发布', group: '组织与标准', batch: 2, roles: ['hr', 'committee'], depth: '◐', done: false },
-  { key: 'roster', title: '员工花名册', group: '组织与标准', batch: 2, roles: ['hr', 'manager', 'exec'], depth: '●', done: false },
-  { key: 'employee-detail', title: '员工档案', group: '组织与标准', batch: 2, roles: ['hr', 'manager', 'exec', 'employee'], depth: '◐', done: false },
+  { key: 'org-tree', title: '组织架构', group: '组织与标准', batch: 2, roles: ['hr', 'exec', 'manager', 'tenant_admin'], depth: '●', done: true },
+  { key: 'positions', title: '岗位管理', group: '组织与标准', batch: 2, roles: ['hr', 'tenant_admin'], depth: '●', done: true },
+  { key: 'channels', title: '职级通道', group: '组织与标准', batch: 2, roles: ['hr', 'employee', 'manager', 'exec'], depth: '◐', done: true },
+  { key: 'standards-list', title: '任职资格标准库', group: '组织与标准', batch: 2, roles: ['hr', 'committee', 'manager', 'tenant_admin'], depth: '●', done: true },
+  { key: 'standard-detail', title: '标准详情', group: '组织与标准', batch: 2, roles: ['hr', 'committee', 'manager', 'employee'], depth: '●', done: true, note: '基本/履职/知识/能力/贡献 五部分 Tab' },
+  { key: 'standard-versions', title: '版本与发布', group: '组织与标准', batch: 2, roles: ['hr', 'committee'], depth: '◐', done: true },
+  { key: 'roster', title: '员工花名册', group: '组织与标准', batch: 2, roles: ['hr', 'manager', 'exec'], depth: '●', done: true },
+  { key: 'employee-detail', title: '员工档案', group: '组织与标准', batch: 2, roles: ['hr', 'manager', 'exec', 'employee'], depth: '◐', done: true },
 
   // ============ 批次 3 · 认证与画像 ============
   { key: 'ws-employee', title: '员工工作台', group: '工作台', batch: 3, roles: ['employee'], depth: '●', done: false },

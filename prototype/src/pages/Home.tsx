@@ -140,7 +140,7 @@ export function Home() {
               title: '姓名',
               dataIndex: 'name',
               render: (v, row) => (
-                <Link to={`/app/page/employee-detail`} state={{ sample: row.id }}>
+                <Link to={`/app/employee-detail?id=${row.id}`}>
                   {v}
                 </Link>
               ),
