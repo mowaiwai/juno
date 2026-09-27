@@ -1,0 +1,10 @@
+<view class="page">
+  <button class="btn" type="primary" bindtap="onApply">发起认证申请</button>
+  <view class="cert" wx:for="{{certs}}" wx:key="id">
+    <view class="row"><text class="label">目标职级</text><text>{{item.from_grade}} → {{item.to_grade}}</text></view>
+    <view class="row"><text class="label">状态</text><text class="status">{{item.status}}</text></view>
+    <view class="row" wx:if="{{item.terminate_reason}}"><text class="label">原因</text><text>{{item.terminate_reason}}</text></view>
+    <button wx:if="{{item.status === 'MATERIAL_REVIEW' || item.status === 'MATERIAL_RETURNED'}}" size="mini" data-id="{{item.id}}" bindtap="onUpload">上传举证</button>
+  </view>
+  <view wx:if="{{!certs.length && !loading}}" class="empty">暂无认证记录</view>
+</view>

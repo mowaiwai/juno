@@ -1,0 +1,7 @@
+.page { padding: 24rpx; }
+.btn { margin-bottom: 24rpx; }
+.cert { background: #fff; border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx; }
+.row { display: flex; margin-bottom: 8rpx; }
+.label { color: #718096; width: 160rpx; }
+.status { color: #2B6CB0; font-weight: 600; }
+.empty { text-align: center; color: #A0AEC0; margin-top: 40rpx; }
