@@ -13,7 +13,7 @@ const STATUS_ICON: Record<Status, React.ReactNode> = {
 
 const STATUS_TEXT: Record<Status, string> = { met: '达标', partial: '进行中', gap: '有差距' };
 
-/** 林一凡当前达标值（剧本数据，来源于认证举证 / 测评 / 绩效中心） */
+/** 许云清当前达标值（剧本数据，来源于认证举证 / 测评 / 绩效中心） */
 const MY = {
   dutyLevels: [3, 3, 2, 1],
   knowledgeMastery: [3, 1, 3, 1],

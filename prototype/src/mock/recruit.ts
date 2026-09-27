@@ -19,10 +19,10 @@ export interface Requisition {
 }
 
 export const requisitions: Requisition[] = [
-  { id: 'REQ01', position: '高级软件工程师', dept: '软件研发部', grade: 'P4', headcount: 2, funnel: [46, 18, 7, 3, 1], owner: '王建国', priority: 'high', openedAt: '2026-08-20' },
-  { id: 'REQ02', position: '机械工程师', dept: '机械设计部', grade: 'P3', headcount: 3, funnel: [38, 15, 8, 4, 2], owner: '赵磊', priority: 'high', openedAt: '2026-08-25' },
-  { id: 'REQ03', position: '大客户经理', dept: '销售部', grade: 'S3', headcount: 1, funnel: [29, 10, 4, 2, 0], owner: '韩雪', priority: 'mid', openedAt: '2026-09-01' },
-  { id: 'REQ04', position: '质量工程师', dept: '质量部', grade: 'T3', headcount: 1, funnel: [24, 9, 3, 1, 1], owner: '林晓', priority: 'mid', openedAt: '2026-09-05' },
+  { id: 'REQ01', position: '高级软件工程师', dept: '软件研发部', grade: 'P4', headcount: 2, funnel: [46, 18, 7, 3, 1], owner: '陆行舟', priority: 'high', openedAt: '2026-08-20' },
+  { id: 'REQ02', position: '机械工程师', dept: '机械设计部', grade: 'P3', headcount: 3, funnel: [38, 15, 8, 4, 2], owner: '谢星野', priority: 'high', openedAt: '2026-08-25' },
+  { id: 'REQ03', position: '大客户经理', dept: '销售部', grade: 'S3', headcount: 1, funnel: [29, 10, 4, 2, 0], owner: '江望舒', priority: 'mid', openedAt: '2026-09-01' },
+  { id: 'REQ04', position: '质量工程师', dept: '质量部', grade: 'T3', headcount: 1, funnel: [24, 9, 3, 1, 1], owner: '冯柚', priority: 'mid', openedAt: '2026-09-05' },
 ];
 
 // ============ 候选人管道 ============
@@ -54,17 +54,17 @@ export interface Candidate {
 }
 
 export const candidates: Candidate[] = [
-  { id: 'C001', name: '顾远航', reqId: 'REQ01', stage: 'offer', source: 'BOSS 直聘', matchScore: 88, years: 7, lastTitle: '高级后端工程师', expectedSalary: 38000, rating: 4.5, tags: ['分布式', '带过小团队'], appliedAt: '2026-08-28' },
-  { id: 'C002', name: '卢志强', reqId: 'REQ01', stage: 'final', source: '内推', matchScore: 79, years: 6, lastTitle: '软件工程师', expectedSalary: 35000, rating: 4, tags: ['Java 扎实'], appliedAt: '2026-09-02' },
-  { id: 'C003', name: '毛晓峰', reqId: 'REQ01', stage: 'first', source: '猎头', matchScore: 72, years: 5, lastTitle: '全栈工程师', expectedSalary: 32000, tags: ['前后端通'], appliedAt: '2026-09-10' },
-  { id: 'C004', name: '邱实', reqId: 'REQ01', stage: 'screen', source: 'BOSS 直聘', matchScore: 64, years: 4, lastTitle: '后端工程师', expectedSalary: 28000, tags: ['简历待筛'], appliedAt: '2026-09-18' },
-  { id: 'C005', name: '苏文博', reqId: 'REQ02', stage: 'onboard', source: '校招', matchScore: 82, years: 0, lastTitle: '机械工程硕士', expectedSalary: 22000, rating: 4.2, tags: ['仿真竞赛', '校招优秀'], appliedAt: '2026-08-30' },
-  { id: 'C006', name: '魏然', reqId: 'REQ02', stage: 'final', source: '内推', matchScore: 85, years: 5, lastTitle: '机械设计工程师', expectedSalary: 27000, rating: 4.3, tags: ['结构件经验'], appliedAt: '2026-09-05' },
-  { id: 'C007', name: '阮明', reqId: 'REQ02', stage: 'first', source: '智联', matchScore: 68, years: 3, lastTitle: '机械工程师', expectedSalary: 22000, tags: ['基础一般'], appliedAt: '2026-09-12' },
-  { id: 'C008', name: '任远', reqId: 'REQ03', stage: 'final', source: '猎头', matchScore: 86, years: 8, lastTitle: '行业销售经理', expectedSalary: 38000, rating: 4.4, tags: ['客户资源', '大客户打法'], appliedAt: '2026-09-06' },
-  { id: 'C009', name: '唐鑫', reqId: 'REQ03', stage: 'first', source: 'BOSS 直聘', matchScore: 70, years: 5, lastTitle: '客户经理', expectedSalary: 30000, tags: ['冲劲足'], appliedAt: '2026-09-14' },
-  { id: 'C010', name: '尹航', reqId: 'REQ04', stage: 'offer', source: '内推', matchScore: 90, years: 6, lastTitle: '质量工程师', expectedSalary: 24000, rating: 4.6, tags: ['六西格玛黑带', '体系审核'], appliedAt: '2026-09-08' },
-  { id: 'C011', name: '龚磊', reqId: 'REQ01', stage: 'rejected', source: '智联', matchScore: 55, years: 4, lastTitle: '初级工程师', expectedSalary: 26000, rating: 2.5, tags: ['深度不足'], appliedAt: '2026-09-01' },
+  { id: 'C001', name: '傅星言', reqId: 'REQ01', stage: 'offer', source: 'BOSS 直聘', matchScore: 88, years: 7, lastTitle: '高级后端工程师', expectedSalary: 38000, rating: 4.5, tags: ['分布式', '带过小团队'], appliedAt: '2026-08-28' },
+  { id: 'C002', name: '祁让', reqId: 'REQ01', stage: 'final', source: '内推', matchScore: 79, years: 6, lastTitle: '软件工程师', expectedSalary: 35000, rating: 4, tags: ['Java 扎实'], appliedAt: '2026-09-02' },
+  { id: 'C003', name: '季临渊', reqId: 'REQ01', stage: 'first', source: '猎头', matchScore: 72, years: 5, lastTitle: '全栈工程师', expectedSalary: 32000, tags: ['前后端通'], appliedAt: '2026-09-10' },
+  { id: 'C004', name: '邱野', reqId: 'REQ01', stage: 'screen', source: 'BOSS 直聘', matchScore: 64, years: 4, lastTitle: '后端工程师', expectedSalary: 28000, tags: ['简历待筛'], appliedAt: '2026-09-18' },
+  { id: 'C005', name: '苏星河', reqId: 'REQ02', stage: 'onboard', source: '校招', matchScore: 82, years: 0, lastTitle: '机械工程硕士', expectedSalary: 22000, rating: 4.2, tags: ['仿真竞赛', '校招优秀'], appliedAt: '2026-08-30' },
+  { id: 'C006', name: '魏知许', reqId: 'REQ02', stage: 'final', source: '内推', matchScore: 85, years: 5, lastTitle: '机械设计工程师', expectedSalary: 27000, rating: 4.3, tags: ['结构件经验'], appliedAt: '2026-09-05' },
+  { id: 'C007', name: '阮清时', reqId: 'REQ02', stage: 'first', source: '智联', matchScore: 68, years: 3, lastTitle: '机械工程师', expectedSalary: 22000, tags: ['基础一般'], appliedAt: '2026-09-12' },
+  { id: 'C008', name: '任栩', reqId: 'REQ03', stage: 'final', source: '猎头', matchScore: 86, years: 8, lastTitle: '行业销售经理', expectedSalary: 38000, rating: 4.4, tags: ['客户资源', '大客户打法'], appliedAt: '2026-09-06' },
+  { id: 'C009', name: '唐棠', reqId: 'REQ03', stage: 'first', source: 'BOSS 直聘', matchScore: 70, years: 5, lastTitle: '客户经理', expectedSalary: 30000, tags: ['冲劲足'], appliedAt: '2026-09-14' },
+  { id: 'C010', name: '尹朝', reqId: 'REQ04', stage: 'offer', source: '内推', matchScore: 90, years: 6, lastTitle: '质量工程师', expectedSalary: 24000, rating: 4.6, tags: ['六西格玛黑带', '体系审核'], appliedAt: '2026-09-08' },
+  { id: 'C011', name: '龚一', reqId: 'REQ01', stage: 'rejected', source: '智联', matchScore: 55, years: 4, lastTitle: '初级工程师', expectedSalary: 26000, rating: 2.5, tags: ['深度不足'], appliedAt: '2026-09-01' },
 ];
 
 // ============ AI 生成 JD ============

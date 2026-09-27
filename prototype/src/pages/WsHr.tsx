@@ -131,7 +131,7 @@ export function WsHr() {
               {[
                 { key: 'standards-list', label: '标准库维护', desc: '5 序列 · 岗位绑定率 100%' },
                 { key: 'inv-batches', label: '盘点批次筹备', desc: '10-15 启动 · 批次 4 交付' },
-                { key: 'cert-vote', label: '管委会终审', desc: '曹阳 P3→P4 待表决' },
+                { key: 'cert-vote', label: '管委会终审', desc: '汪漾 P3→P4 待表决' },
                 { key: 'ai-usage', label: 'AI 用量报表', desc: '批次 8 交付' },
               ].map((q) => (
                 <Link key={q.key} to={`/app/${q.key}`}>

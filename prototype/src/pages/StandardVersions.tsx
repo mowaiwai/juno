@@ -28,7 +28,7 @@ const VERSIONS: Record<string, VersionRow[]> = {
     {
       version: 'v2.3',
       date: '2026-08-12',
-      author: '周敏（HRD）',
+      author: '温晚晴（HRD）',
       status: '已发布',
       changes: [
         '知识技能：新增「分布式系统基础」L2 要求，对应填空题型',
@@ -39,7 +39,7 @@ const VERSIONS: Record<string, VersionRow[]> = {
     {
       version: 'v2.2',
       date: '2026-04-02',
-      author: '王建国（研发部经理）',
+      author: '陆行舟（研发部经理）',
       status: '已发布',
       changes: ['编码实现一次通过率标准从 75% 上调至 80%'],
     },

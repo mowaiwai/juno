@@ -1,5 +1,5 @@
 /**
- * 认证主链 mock —— 剧本：林一凡 SW-P3 → P4 认证（管委会路由）。
+ * 认证主链 mock —— 剧本：许云清 SW-P3 → P4 认证（管委会路由）。
  * 状态机与路由规则对齐 PRD「认证与盘点状态机」：
  * P1→P2 部门经理单审 / P2→P3 认证小组表决 / P3→P4·P4→P5 管委会终审。
  */
@@ -175,11 +175,11 @@ export const certifications: CertRecord[] = [
       { name: '新人任务', task: '完成入职任务包', status: 'approved', materials: ['带教确认单.pdf'] },
     ],
     votes: [
-      { member: '赵磊', memberTitle: '机械设计经理', choice: 'agree', comment: '举证扎实，答辩表达清晰' },
-      { member: '孙鹏', memberTitle: '工艺工程经理', choice: 'agree', comment: '同意通过' },
-      { member: '高启明', memberTitle: '研发总监', choice: 'disagree', comment: '分布式知识测验虽过线但偏弱，建议补强后再议' },
-      { member: '王建国', memberTitle: '软件研发经理', choice: null },
-      { member: '林晓', memberTitle: '质量经理', choice: null },
+      { member: '谢星野', memberTitle: '机械设计经理', choice: 'agree', comment: '举证扎实，答辩表达清晰' },
+      { member: '韩朔', memberTitle: '工艺工程经理', choice: 'agree', comment: '同意通过' },
+      { member: '江予安', memberTitle: '研发总监', choice: 'disagree', comment: '分布式知识测验虽过线但偏弱，建议补强后再议' },
+      { member: '陆行舟', memberTitle: '软件研发经理', choice: null },
+      { member: '冯柚', memberTitle: '质量经理', choice: null },
     ],
     timeline: [
       { stage: 'basic_check', time: '2026-08-16', result: 'pass', note: '基本条件达标' },
@@ -214,7 +214,7 @@ export const certifications: CertRecord[] = [
       { stage: 'exam', time: '2026-08-28', result: 'fail', note: '首考 68 分未达线 → 补考' },
       { stage: 'exam', time: '2026-09-06', result: 'pass', note: '补考 74 分（合格线 70）' },
       { stage: 'evidence', time: '2026-09-18', result: 'doing', note: '举证已提交，待部门经理预审' },
-      { stage: 'pre_review', time: '—', result: 'doing', note: '王建国（部门经理）预审中' },
+      { stage: 'pre_review', time: '—', result: 'doing', note: '陆行舟（部门经理）预审中' },
       { stage: 'routed_review', time: '—', result: 'pending', note: '认证小组表决' },
     ],
   },
@@ -238,18 +238,18 @@ export const certifications: CertRecord[] = [
       { name: '降本改进', task: '结构降本专项', status: 'approved', materials: ['降本 6.8% 结案报告.pdf'] },
     ],
     votes: [
-      { member: '张澜', memberTitle: '首席执行官', choice: 'agree', comment: '成果可量化，同意' },
-      { member: '周敏', memberTitle: 'HRD / 管委会', choice: null },
-      { member: '马德海', memberTitle: '制造总监', choice: 'agree', comment: '试产闭环质量高' },
-      { member: '李卫国', memberTitle: '财务总监', choice: 'agree', comment: '降本数据经财务复核' },
-      { member: '沈一楠', memberTitle: '营销总监', choice: 'agree' },
+      { member: '沈既明', memberTitle: '首席执行官', choice: 'agree', comment: '成果可量化，同意' },
+      { member: '温晚晴', memberTitle: 'HRD / 管委会', choice: null },
+      { member: '岑屿', memberTitle: '制造总监', choice: 'agree', comment: '试产闭环质量高' },
+      { member: '简时', memberTitle: '财务总监', choice: 'agree', comment: '降本数据经财务复核' },
+      { member: '温既白', memberTitle: '营销总监', choice: 'agree' },
     ],
     timeline: [
       { stage: 'basic_check', time: '2026-07-11', result: 'pass', note: '近两年含 A，达标' },
       { stage: 'exam', time: '2026-07-18', result: 'pass', note: '知识测验 91 分' },
       { stage: 'evidence', time: '2026-08-05', result: 'pass', note: '3 项举证全部通过' },
       { stage: 'pre_review', time: '2026-08-12', result: 'pass', note: 'HR 预审通过' },
-      { stage: 'defense', time: '2026-09-25', result: 'doing', note: '管委会表决中（4/5 已表决，待周敏）' },
+      { stage: 'defense', time: '2026-09-25', result: 'doing', note: '管委会表决中（4/5 已表决，待温晚晴）' },
       { stage: 'public_notice', time: '—', result: 'pending', note: '表决通过后公示' },
     ],
   },
@@ -275,7 +275,7 @@ export const certifications: CertRecord[] = [
   },
 ];
 
-/** 林一凡历史认证记录（供「我的认证」页） */
+/** 许云清历史认证记录（供「我的认证」页） */
 export const certHistory: {
   employeeId: string;
   id: string;

@@ -191,11 +191,11 @@ export interface WillingnessRecord {
 }
 
 export const willingnessRecords: WillingnessRecord[] = [
-  { id: 'w1', employeeId: 'E10002', employeeName: '周敏', position: 'HRD', targetPosition: '首席执行官', willingness: 'willing', confirmedAt: '2026-09-12', note: '愿意承担更大管理责任' },
-  { id: 'w2', employeeId: 'E10087', employeeName: '陈昊', position: '高级软件工程师', targetPosition: '软件研发经理', willingness: 'unconfirmed' },
-  { id: 'w3', employeeId: 'E10020', employeeName: '王建国', position: '软件研发经理', targetPosition: '研发总监', willingness: 'willing', confirmedAt: '2026-09-10' },
-  { id: 'w4', employeeId: 'E10090', employeeName: '曹阳', position: '高级机械工程师', targetPosition: '机械设计经理', willingness: 'unwilling', confirmedAt: '2026-09-08', note: '希望继续走专家路线' },
-  { id: 'w5', employeeId: 'E10051', employeeName: '钱满仓', position: '车间主任', targetPosition: '制造总监', willingness: 'unconfirmed' },
+  { id: 'w1', employeeId: 'E10002', employeeName: '温晚晴', position: 'HRD', targetPosition: '首席执行官', willingness: 'willing', confirmedAt: '2026-09-12', note: '愿意承担更大管理责任' },
+  { id: 'w2', employeeId: 'E10087', employeeName: '顾屿白', position: '高级软件工程师', targetPosition: '软件研发经理', willingness: 'unconfirmed' },
+  { id: 'w3', employeeId: 'E10020', employeeName: '陆行舟', position: '软件研发经理', targetPosition: '研发总监', willingness: 'willing', confirmedAt: '2026-09-10' },
+  { id: 'w4', employeeId: 'E10104', employeeName: '汪漾', position: '高级机械工程师', targetPosition: '机械设计经理', willingness: 'unwilling', confirmedAt: '2026-09-08', note: '希望继续走专家路线' },
+  { id: 'w5', employeeId: 'E10051', employeeName: '唐雨时', position: '车间主任', targetPosition: '制造总监', willingness: 'unconfirmed' },
 ];
 
 // ============ 梯队池 ============
@@ -219,13 +219,13 @@ export interface PoolMember {
 }
 
 export const poolMembers: PoolMember[] = [
-  { employeeId: 'E10002', name: '周敏', position: 'HRD', level: 'L1', reason: '高潜+高管级绩效，管委会认可', joinedAt: '2025-01-10', status: 'active' },
-  { employeeId: 'E10020', name: '王建国', position: '软件研发经理', level: 'L1', reason: '研发中坚，管理潜力突出', joinedAt: '2025-03-15', status: 'active' },
-  { employeeId: 'E10087', name: '陈昊', position: '高级软件工程师', level: 'L1', reason: 'P4 核心，技术深度+领导力', joinedAt: '2025-06-01', status: 'active' },
-  { employeeId: 'E10086', name: '林一凡', position: '软件工程师', level: 'L2', reason: '高潜，P3→P4 成长中', joinedAt: '2026-01-10', status: 'active' },
-  { employeeId: 'E10093', name: '冯雪', position: '软件工程师', level: 'L2', reason: '绩效 A，系统思维强', joinedAt: '2026-02-20', status: 'active' },
-  { employeeId: 'E10161', name: '秦朗', position: '大客户经理', level: 'L2', reason: '销冠，客户资源丰富', joinedAt: '2026-03-01', status: 'active' },
-  { employeeId: 'E10092', name: '邓超', position: '软件工程师', level: 'L3', reason: '潜力中，绩效稳定', joinedAt: '2026-05-10', status: 'active' },
+  { employeeId: 'E10002', name: '温晚晴', position: 'HRD', level: 'L1', reason: '高潜+高管级绩效，管委会认可', joinedAt: '2025-01-10', status: 'active' },
+  { employeeId: 'E10020', name: '陆行舟', position: '软件研发经理', level: 'L1', reason: '研发中坚，管理潜力突出', joinedAt: '2025-03-15', status: 'active' },
+  { employeeId: 'E10087', name: '顾屿白', position: '高级软件工程师', level: 'L1', reason: 'P4 核心，技术深度+领导力', joinedAt: '2025-06-01', status: 'active' },
+  { employeeId: 'E10086', name: '许云清', position: '软件工程师', level: 'L2', reason: '高潜，P3→P4 成长中', joinedAt: '2026-01-10', status: 'active' },
+  { employeeId: 'E10093', name: '温以宁', position: '软件工程师', level: 'L2', reason: '绩效 A，系统思维强', joinedAt: '2026-02-20', status: 'active' },
+  { employeeId: 'E10161', name: '秦越', position: '大客户经理', level: 'L2', reason: '销冠，客户资源丰富', joinedAt: '2026-03-01', status: 'active' },
+  { employeeId: 'E10092', name: '许言蹊', position: '软件工程师', level: 'L3', reason: '潜力中，绩效稳定', joinedAt: '2026-05-10', status: 'active' },
   { employeeId: 'E10062', name: '孙娜', position: '质量工程师', level: 'L3', reason: '严谨细致，质量意识强', joinedAt: '2026-06-15', status: 'active' },
 ];
 
@@ -244,10 +244,10 @@ export interface ABrole {
 }
 
 export const abRoles: ABrole[] = [
-  { id: 'ab1', positionId: 'p003', positionName: '软件研发经理', deptName: '软件研发部', aId: 'E10020', aName: '王建国', bId: 'E10087', bName: '陈昊', bStatus: 'shadowing' },
-  { id: 'ab2', positionId: 'p007', positionName: '机械设计经理', deptName: '机械设计部', aId: 'E10030', aName: '马德海', bId: 'E10090', bName: '曹阳', bStatus: 'training' },
-  { id: 'ab3', positionId: 'p013', positionName: '车间主任', deptName: '机加车间', aId: 'E10051', aName: '钱满仓', bId: 'E10052', bName: '范进', bStatus: 'training' },
-  { id: 'ab4', positionId: 'p018', positionName: '大客户经理', deptName: '销售部', aId: 'E10161', aName: '秦朗', bId: 'E10162', bName: '白玲', bStatus: 'ready' },
+  { id: 'ab1', positionId: 'p003', positionName: '软件研发经理', deptName: '软件研发部', aId: 'E10020', aName: '陆行舟', bId: 'E10087', bName: '顾屿白', bStatus: 'shadowing' },
+  { id: 'ab2', positionId: 'p007', positionName: '机械设计经理', deptName: '机械设计部', aId: 'E10030', aName: '谢星野', bId: 'E10104', bName: '汪漾', bStatus: 'training' },
+  { id: 'ab3', positionId: 'p013', positionName: '车间主任', deptName: '机加车间', aId: 'E10051', aName: '唐雨时', bId: 'E10052', bName: '何栖迟', bStatus: 'training' },
+  { id: 'ab4', positionId: 'p018', positionName: '大客户经理', deptName: '销售部', aId: 'E10161', aName: '秦越', bId: 'E10162', bName: '白溪', bStatus: 'ready' },
 ];
 
 export const AB_STATUS_LABEL = { training: '培养中', ready: '已就绪', shadowing: '跟岗中' };
@@ -269,10 +269,10 @@ export interface PoolTraining {
 }
 
 export const poolTrainings: PoolTraining[] = [
-  { id: 'pt1', employeeId: 'E10086', employeeName: '林一凡', level: 'L2', program: 'P4 晋升加速营', startDate: '2026-07-01', endDate: '2026-12-31', progress: 60, status: 'doing', mentor: '陈昊' },
-  { id: 'pt2', employeeId: 'E10093', employeeName: '冯雪', level: 'L2', program: '系统思维训练营', startDate: '2026-08-01', endDate: '2026-11-30', progress: 40, status: 'doing', mentor: '王建国' },
-  { id: 'pt3', employeeId: 'E10087', employeeName: '陈昊', level: 'L1', program: '管理者转身项目', startDate: '2026-06-01', endDate: '2026-12-31', progress: 75, status: 'doing', mentor: '高启明' },
-  { id: 'pt4', employeeId: 'E10161', employeeName: '秦朗', level: 'L2', program: '销售管理者培养', startDate: '2026-05-01', endDate: '2026-10-31', progress: 100, status: 'done', mentor: '沈一楠' },
+  { id: 'pt1', employeeId: 'E10086', employeeName: '许云清', level: 'L2', program: 'P4 晋升加速营', startDate: '2026-07-01', endDate: '2026-12-31', progress: 60, status: 'doing', mentor: '顾屿白' },
+  { id: 'pt2', employeeId: 'E10093', employeeName: '温以宁', level: 'L2', program: '系统思维训练营', startDate: '2026-08-01', endDate: '2026-11-30', progress: 40, status: 'doing', mentor: '陆行舟' },
+  { id: 'pt3', employeeId: 'E10087', employeeName: '顾屿白', level: 'L1', program: '管理者转身项目', startDate: '2026-06-01', endDate: '2026-12-31', progress: 75, status: 'doing', mentor: '江予安' },
+  { id: 'pt4', employeeId: 'E10161', employeeName: '秦越', level: 'L2', program: '销售管理者培养', startDate: '2026-05-01', endDate: '2026-10-31', progress: 100, status: 'done', mentor: '温既白' },
 ];
 
 export const TRAINING_STATUS_LABEL = { doing: '进行中', done: '已完成', pending: '待启动' };

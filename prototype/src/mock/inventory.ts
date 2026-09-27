@@ -54,7 +54,7 @@ export const batches: InventoryBatch[] = [
     scopeDeptIds: ['100'],
     estCount: 650,
     confirmedCount: 650,
-    owner: '周敏',
+    owner: '温晚晴',
   },
   {
     id: 'inv_2026_h1',
@@ -67,7 +67,7 @@ export const batches: InventoryBatch[] = [
     scopeDeptIds: ['305', '306', '307'],
     estCount: 36,
     confirmedCount: 12,
-    owner: '周敏',
+    owner: '温晚晴',
   },
   {
     id: 'inv_2026_annual',
@@ -80,7 +80,7 @@ export const batches: InventoryBatch[] = [
     scopeDeptIds: ['100'],
     estCount: 650,
     confirmedCount: 0,
-    owner: '周敏',
+    owner: '温晚晴',
   },
 ];
 
@@ -186,10 +186,10 @@ export interface ThreeCharts {
 export const threeCharts: ThreeCharts = {
   year: 2026,
   strategy: [
-    { initiative: '降本增效', talentSupport: 86, owner: '李卫国', note: '供应链+工艺联合降本，核心由 T/M 序列承接' },
-    { initiative: '海外建厂', talentSupport: 54, owner: '马德海', note: '缺懂当地法规的运营+质量复合型人才' },
-    { initiative: '数字化转型', talentSupport: 78, owner: '高启明', note: '软件研发承接，P3→P4 中坚需加速' },
-    { initiative: '新产品线扩张', talentSupport: 62, owner: '沈一楠', note: '销服+研发协同，销售 S3→S4 储备不足' },
+    { initiative: '降本增效', talentSupport: 86, owner: '简时', note: '供应链+工艺联合降本，核心由 T/M 序列承接' },
+    { initiative: '海外建厂', talentSupport: 54, owner: '岑屿', note: '缺懂当地法规的运营+质量复合型人才' },
+    { initiative: '数字化转型', talentSupport: 78, owner: '江予安', note: '软件研发承接，P3→P4 中坚需加速' },
+    { initiative: '新产品线扩张', talentSupport: 62, owner: '温既白', note: '销服+研发协同，销售 S3→S4 储备不足' },
   ],
   org: {
     departments: 19,
@@ -306,19 +306,19 @@ export const gapWarnings: GapWarning[] = [
     positionName: '高级软件工程师',
     deptName: '软件研发部',
     incumbentId: 'E10087',
-    incumbentName: '陈昊',
+    incumbentName: '顾屿白',
     level: 'HIGH',
-    reason: '核心岗位 4 个编制，目前仅 2 人在岗（陈昊、刘洋）；中坚 P3→P4 通过率不足，且 1 人有 MID 流失风险',
-    suggestion: '加速 P3→P4 认证（林一凡/冯雪）；启动外部招聘；对陈昊启动保留面谈',
+    reason: '核心岗位 4 个编制，目前仅 2 人在岗（顾屿白、彭清樾）；中坚 P3→P4 通过率不足，且 1 人有 MID 流失风险',
+    suggestion: '加速 P3→P4 认证（许云清/温以宁）；启动外部招聘；对顾屿白启动保留面谈',
   },
   {
     positionId: 'p001',
     positionName: '首席执行官',
     deptName: '华砺精工',
     incumbentId: 'E10001',
-    incumbentName: '张澜',
+    incumbentName: '沈既明',
     level: 'MID',
-    reason: '一把手无明确继任者，高启明/周敏为潜在候选但未做正式培养',
+    reason: '一把手无明确继任者，江予安/温晚晴为潜在候选但未做正式培养',
     suggestion: '明确 1-2 名继任候选人，纳入管委会培养计划，半年盘点一次',
   },
   {
@@ -326,20 +326,20 @@ export const gapWarnings: GapWarning[] = [
     positionName: '车间主任',
     deptName: '机加车间',
     incumbentId: 'E10051',
-    incumbentName: '钱满仓',
+    incumbentName: '唐雨时',
     level: 'MID',
-    reason: '钱满仓司龄 16 年、潜力 LOW，已到复评期；车间无 B 角',
-    suggestion: '配置 B 角（范进/钟志强），制定继任培养计划；复评关注',
+    reason: '唐雨时司龄 16 年、潜力 LOW，已到复评期；车间无 B 角',
+    suggestion: '配置 B 角（时樾/潘临），制定继任培养计划；复评关注',
   },
   {
     positionId: 'p018',
     positionName: '大客户经理',
     deptName: '销售部',
     incumbentId: 'E10161',
-    incumbentName: '秦朗',
+    incumbentName: '秦越',
     level: 'HIGH',
     reason: '销冠一人贡献占部门 35%，无 S3→S4 梯队，单岗风险极高',
-    suggestion: '启动 S4 继任（白玲/秦朗内部）+ 外部猎聘；客户资源共享化',
+    suggestion: '启动 S4 继任（白溪/秦越内部）+ 外部猎聘；客户资源共享化',
   },
 ];
 

@@ -71,11 +71,11 @@ export interface AiUsageRow {
 
 export const aiUsageRows: AiUsageRow[] = [
   { id: 'AU01', time: '2026-09-27 10:12', scene: '出题', model: '豆包-pro', inputTokens: 8600, outputTokens: 4200, cost: 0.082, operator: '系统自动（考试中心）' },
-  { id: 'AU02', time: '2026-09-27 09:40', scene: '问答', model: 'Kimi', inputTokens: 12400, outputTokens: 3100, cost: 0.076, operator: '张澜 · 驾驶舱问答' },
+  { id: 'AU02', time: '2026-09-27 09:40', scene: '问答', model: 'Kimi', inputTokens: 12400, outputTokens: 3100, cost: 0.076, operator: '沈既明 · 驾驶舱问答' },
   { id: 'AU03', time: '2026-09-26 16:05', scene: '归因', model: '豆包-pro', inputTokens: 15600, outputTokens: 5800, cost: 0.124, operator: '系统自动（盘点校准）' },
   { id: 'AU04', time: '2026-09-26 14:22', scene: '画像', model: '智谱 GLM-4', inputTokens: 21000, outputTokens: 6400, cost: 0.198, operator: '系统自动（画像引擎）' },
-  { id: 'AU05', time: '2026-09-25 11:30', scene: '预审', model: '豆包-pro', inputTokens: 9800, outputTokens: 2600, cost: 0.071, operator: '周敏 · 认证材料预审' },
-  { id: 'AU06', time: '2026-09-25 10:02', scene: 'IDP', model: '通义-plus', inputTokens: 7600, outputTokens: 3900, cost: 0.064, operator: '林一凡 · IDP 建议' },
+  { id: 'AU05', time: '2026-09-25 11:30', scene: '预审', model: '豆包-pro', inputTokens: 9800, outputTokens: 2600, cost: 0.071, operator: '温晚晴 · 认证材料预审' },
+  { id: 'AU06', time: '2026-09-25 10:02', scene: 'IDP', model: '通义-plus', inputTokens: 7600, outputTokens: 3900, cost: 0.064, operator: '许云清 · IDP 建议' },
   { id: 'AU07', time: '2026-09-24 17:48', scene: '出题', model: '智谱 GLM-4', inputTokens: 11200, outputTokens: 5100, cost: 0.118, operator: '系统自动（灰度 30%）' },
   { id: 'AU08', time: '2026-09-24 15:10', scene: '归因', model: '豆包-pro', inputTokens: 14300, outputTokens: 4900, cost: 0.109, operator: '系统自动（绩效归因）' },
 ];

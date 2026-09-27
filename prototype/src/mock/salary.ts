@@ -212,10 +212,10 @@ export const approvalPending: ApprovalRecord[] = [
 ];
 
 export const approvalHistory: ApprovalRecord[] = [
-  { id: 'AR101', batch: '2025 年度调薪', employeeId: 'E10088', kind: 'annual', oldGrade: 'P4', newGrade: 'P4', oldSalary: 34000, newSalary: 36040, marketPercentile: 50, status: 2, submittedAt: '2025-12-10', decidedAt: '2025-12-18', decider: '张澜' },
-  { id: 'AR102', batch: '2026-08 晋升联动', employeeId: 'E10104', kind: 'promotion', oldGrade: 'P3', newGrade: 'P4', oldSalary: 24000, newSalary: 29000, status: 2, submittedAt: '2026-08-15', decidedAt: '2026-08-22', decider: '张澜' },
-  { id: 'AR103', batch: '2026-08 晋升联动', employeeId: 'E10092', kind: 'promotion', oldGrade: 'P3', newGrade: 'P4', oldSalary: 27000, newSalary: 32000, status: 2, submittedAt: '2026-08-15', decidedAt: '2026-08-22', decider: '张澜' },
-  { id: 'AR104', batch: '2025 年度调薪', employeeId: 'E10004', kind: 'annual', oldGrade: 'M2', newGrade: 'M2', oldSalary: 32000, newSalary: 34560, marketPercentile: 48, status: 3, submittedAt: '2025-12-10', decidedAt: '2025-12-20', decider: '张澜', rejectReason: '非核心岗位，不符合「年度调薪仅覆盖核心岗位核心人才」规则' },
+  { id: 'AR101', batch: '2025 年度调薪', employeeId: 'E10088', kind: 'annual', oldGrade: 'P4', newGrade: 'P4', oldSalary: 34000, newSalary: 36040, marketPercentile: 50, status: 2, submittedAt: '2025-12-10', decidedAt: '2025-12-18', decider: '沈既明' },
+  { id: 'AR102', batch: '2026-08 晋升联动', employeeId: 'E10104', kind: 'promotion', oldGrade: 'P3', newGrade: 'P4', oldSalary: 24000, newSalary: 29000, status: 2, submittedAt: '2026-08-15', decidedAt: '2026-08-22', decider: '沈既明' },
+  { id: 'AR103', batch: '2026-08 晋升联动', employeeId: 'E10092', kind: 'promotion', oldGrade: 'P3', newGrade: 'P4', oldSalary: 27000, newSalary: 32000, status: 2, submittedAt: '2026-08-15', decidedAt: '2026-08-22', decider: '沈既明' },
+  { id: 'AR104', batch: '2025 年度调薪', employeeId: 'E10004', kind: 'annual', oldGrade: 'M2', newGrade: 'M2', oldSalary: 32000, newSalary: 34560, marketPercentile: 48, status: 3, submittedAt: '2025-12-10', decidedAt: '2025-12-20', decider: '沈既明', rejectReason: '非核心岗位，不符合「年度调薪仅覆盖核心岗位核心人才」规则' },
 ];
 
 // ============ 薪酬套改：先结论 → 抛问题 → 数据 → 2–3 套方案 ============

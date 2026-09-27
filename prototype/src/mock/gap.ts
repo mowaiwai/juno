@@ -184,33 +184,33 @@ export interface ImprovementPlan {
 export const improvementPlans: ImprovementPlan[] = [
   {
     id: 'ip_001', gapId: 'E10086_perf', employeeId: 'E10086',
-    title: '林一凡业绩提升计划', action: 'perf_improvement',
+    title: '许云清业绩提升计划', action: 'perf_improvement',
     status: 'running', startDate: '2026-07-01', endDate: '2026-09-30',
-    progress: 60, owner: '林一凡', manager: '王建国',
+    progress: 60, owner: '许云清', manager: '陆行舟',
   },
   {
     id: 'ip_002', gapId: 'E10086_knowledge', employeeId: 'E10086',
-    title: '林一凡分布式知识补强', action: 'learn_knowledge',
+    title: '许云清分布式知识补强', action: 'learn_knowledge',
     status: 'running', startDate: '2026-07-15', endDate: '2026-10-15',
-    progress: 45, owner: '林一凡', manager: '王建国',
+    progress: 45, owner: '许云清', manager: '陆行舟',
   },
   {
     id: 'ip_003', gapId: 'E10051_duty', employeeId: 'E10051',
-    title: '钱满仓履职过程监督', action: 'process_supervision',
+    title: '唐雨时履职过程监督', action: 'process_supervision',
     status: 'running', startDate: '2026-08-01', endDate: '2026-11-30',
-    progress: 30, owner: '钱满仓', manager: '马德海',
+    progress: 30, owner: '唐雨时', manager: '岑屿',
   },
   {
     id: 'ip_004', gapId: 'E10161_ability', employeeId: 'E10161',
-    title: '秦朗客户导向行为改善', action: 'behavior_improve',
+    title: '秦越客户导向行为改善', action: 'behavior_improve',
     status: 'done', startDate: '2026-05-01', endDate: '2026-08-31',
-    progress: 100, owner: '秦朗', manager: '沈一楠',
+    progress: 100, owner: '秦越', manager: '温既白',
   },
   {
     id: 'ip_005', gapId: 'E10093_contribution', employeeId: 'E10093',
-    title: '冯雪团队贡献计划', action: 'team_contribution',
+    title: '温以宁团队贡献计划', action: 'team_contribution',
     status: 'pending', startDate: '2026-10-01', endDate: '2026-12-31',
-    progress: 0, owner: '冯雪', manager: '王建国',
+    progress: 0, owner: '温以宁', manager: '陆行舟',
   },
 ];
 
@@ -419,7 +419,7 @@ export const coachingRecords: CoachingRecord[] = [
   {
     id: 'cr2', employeeId: 'E10086', managerId: 'E10020',
     date: '2026-09-05', type: '知识辅导',
-    content: '针对分布式知识短板，指定学习路径与考试计划；安排陈昊（P4）作为技术导师。',
+    content: '针对分布式知识短板，指定学习路径与考试计划；安排顾屿白（P4）作为技术导师。',
   },
   {
     id: 'cr3', employeeId: 'E10051', managerId: 'E10002',

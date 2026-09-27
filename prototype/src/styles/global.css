@@ -123,3 +123,44 @@ a {
   color: var(--ochre);
   border: 1px solid transparent;
 }
+
+/* ============================================================
+   小玖爪印鼠标：默认深紫爪 / 悬停可点元素莓粉爪
+   ============================================================ */
+:root {
+  --paw: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%234a4459'%3E%3Cellipse cx='16' cy='22' rx='7.5' ry='6'/%3E%3Cellipse cx='8' cy='13' rx='2.8' ry='3.6' transform='rotate(-18 8 13)'/%3E%3Cellipse cx='24' cy='13' rx='2.8' ry='3.6' transform='rotate(18 24 13)'/%3E%3Cellipse cx='12.5' cy='7.5' rx='2.4' ry='3.2' transform='rotate(-8 12.5 7.5)'/%3E%3Cellipse cx='19.5' cy='7.5' rx='2.4' ry='3.2' transform='rotate(8 19.5 7.5)'/%3E%3C/g%3E%3C/svg%3E");
+  --paw-active: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%23d96a8e'%3E%3Cellipse cx='16' cy='22' rx='7.5' ry='6'/%3E%3Cellipse cx='8' cy='13' rx='2.8' ry='3.6' transform='rotate(-18 8 13)'/%3E%3Cellipse cx='24' cy='13' rx='2.8' ry='3.6' transform='rotate(18 24 13)'/%3E%3Cellipse cx='12.5' cy='7.5' rx='2.4' ry='3.2' transform='rotate(-8 12.5 7.5)'/%3E%3Cellipse cx='19.5' cy='7.5' rx='2.4' ry='3.2' transform='rotate(8 19.5 7.5)'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+body {
+  cursor: var(--paw) 16 22, auto;
+}
+
+a,
+button,
+label,
+summary,
+input,
+textarea,
+select,
+[role='button'],
+[role='tab'],
+[role='menuitem'],
+[role='option'],
+.ant-btn,
+.ant-menu-item,
+.ant-menu-submenu-title,
+.ant-select-selector,
+.ant-picker,
+.ant-checkbox-wrapper,
+.ant-radio-wrapper,
+.ant-switch,
+.ant-tag,
+.ant-tabs-tab,
+.ant-pagination-item,
+.ant-pagination-prev .ant-pagination-item-link,
+.ant-pagination-next .ant-pagination-item-link,
+.ant-steps-item-container,
+.ant-card-head {
+  cursor: var(--paw-active) 16 22, pointer;
+}
