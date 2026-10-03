@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Button,
@@ -11,16 +11,15 @@ import {
   Tag,
   Col,
   Row,
+  Spin,
+  message,
 } from 'antd';
 import { DownloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { employees as allEmployees } from '@/mock/people';
-import { departments, deptName } from '@/mock/org';
-import { useDataScope, useActiveRoleMeta } from '@/store/auth';
-import { MaskedField } from '@/components/MaskedField';
+import { employeesApi, type EmployeeDirectoryItem } from '@/api/employees';
+import { orgApi, type DepartmentItem } from '@/api/org';
+import { useActiveRoleMeta } from '@/store/auth';
 import { Can } from '@/components/Can';
-import { message } from 'antd';
-import type { Employee } from '@/types';
 
 const PERF_COLOR: Record<string, { bg: string; fg: string }> = {
   S: { bg: 'var(--sage-soft)', fg: 'var(--sage)' },
@@ -30,54 +29,58 @@ const PERF_COLOR: Record<string, { bg: string; fg: string }> = {
   D: { bg: 'var(--danger-soft)', fg: 'var(--danger)' },
 };
 
-const RISK_LABEL: Record<string, { text: string; bg: string; fg: string }> = {
-  HIGH: { text: '高风险', bg: 'var(--danger-soft)', fg: 'var(--danger)' },
-  MID: { text: '中风险', bg: 'var(--ochre-soft)', fg: 'var(--ochre)' },
-  LOW: { text: '低风险', bg: 'var(--surface-sunken)', fg: 'var(--ink-3)' },
-};
-
 export function Roster() {
-  const scope = useDataScope();
   const meta = useActiveRoleMeta();
   const [dept, setDept] = useState<string | undefined>();
   const [grade, setGrade] = useState<string | undefined>();
   const [perf, setPerf] = useState<string | undefined>();
   const [keyword, setKeyword] = useState('');
+  const [employees, setEmployees] = useState<EmployeeDirectoryItem[]>([]);
+  const [depts, setDepts] = useState<DepartmentItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const scoped = useMemo(() => scope(allEmployees), [scope]);
+  useEffect(() => {
+    Promise.all([employeesApi.list(), orgApi.departments()])
+      .then(([e, d]) => {
+        setEmployees(e);
+        setDepts(d);
+      })
+      .catch(() => message.error('加载花名册失败'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const deptName = useMemo(() => {
+    const map = new Map(depts.map((d) => [d.id, d.name]));
+    return (id: string) => map.get(id) ?? id;
+  }, [depts]);
 
   const list = useMemo(
     () =>
-      scoped
-        .filter((e) => !dept || e.deptId === dept)
+      employees
+        .filter((e) => !dept || e.dept_id === dept)
         .filter((e) => !grade || e.grade === grade)
-        .filter((e) => !perf || e.perf === perf)
+        .filter((e) => !perf || e.perf_grade === perf)
         .filter(
           (e) =>
             !keyword ||
             e.name.includes(keyword) ||
             e.position.includes(keyword) ||
-            e.id.includes(keyword),
+            e.employee_no.includes(keyword),
         ),
-    [scoped, dept, grade, perf, keyword],
+    [employees, dept, grade, perf, keyword],
   );
 
   const stats = useMemo(() => {
-    const avgScore = scoped.length
-      ? Math.round(scoped.reduce((s, e) => s + e.perfScore, 0) / scoped.length)
-      : 0;
     return {
-      total: scoped.length,
-      core: scoped.filter((e) => e.isCorePosition).length,
-      highRisk: scoped.filter((e) => e.risk === 'HIGH').length,
-      avgScore,
+      total: employees.length,
+      active: employees.filter((e) => e.is_active).length,
     };
-  }, [scoped]);
+  }, [employees]);
 
-  const columns: ColumnsType<Employee> = [
+  const columns: ColumnsType<EmployeeDirectoryItem> = [
     {
       title: '工号',
-      dataIndex: 'id',
+      dataIndex: 'employee_no',
       width: 90,
       render: (v: string) => (
         <span className="num" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
@@ -90,25 +93,25 @@ export function Roster() {
       dataIndex: 'name',
       width: 150,
       render: (v: string, row) => (
-        <Space size={6}>
-          <Link to={`/app/employee-detail?id=${row.id}`} style={{ fontWeight: 600, color: 'var(--ink)' }}>
-            {v}
-          </Link>
-          {row.isCorePosition && (
-            <Tag style={{ borderRadius: 5, fontSize: 11, background: 'var(--clay-soft)', color: 'var(--clay-hover)', borderColor: 'transparent' }}>
-              核心
-            </Tag>
-          )}
-        </Space>
+        <Link to={`/app/employee-detail?id=${row.id}`} style={{ fontWeight: 600, color: 'var(--ink)' }}>
+          {v}
+        </Link>
       ),
     },
     {
       title: '部门',
-      dataIndex: 'deptId',
+      dataIndex: 'dept_id',
       width: 130,
       render: (v: string) => deptName(v),
     },
     { title: '岗位', dataIndex: 'position', ellipsis: true },
+    {
+      title: '职族',
+      dataIndex: 'family',
+      width: 70,
+      render: (v: string) => <Tag style={{ borderRadius: 6, background: 'var(--surface-sunken)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}>{v}</Tag>,
+    },
+    { title: '序列', dataIndex: 'sequence', width: 80 },
     {
       title: '职级',
       dataIndex: 'grade',
@@ -116,74 +119,43 @@ export function Roster() {
       render: (v: string) => <span className="num" style={{ fontWeight: 650 }}>{v}</span>,
     },
     {
-      title: '司龄',
-      dataIndex: 'years',
+      title: '绩效',
+      dataIndex: 'perf_grade',
       width: 70,
-      render: (v: number) => <span className="num">{v} 年</span>,
-    },
-    {
-      title: '2025 绩效',
-      dataIndex: 'perf',
-      width: 100,
-      render: (v: string, row) => {
+      render: (v: string | null) => {
+        if (!v) return <span style={{ color: 'var(--ink-4)' }}>—</span>;
         const c = PERF_COLOR[v];
         return (
-          <Space size={4}>
-            <Tag style={{ borderRadius: 6, background: c.bg, color: c.fg, borderColor: 'transparent', width: 24, textAlign: 'center' }}>
-              {v}
-            </Tag>
-            <span className="num" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-              {row.perfScore}
-            </span>
-          </Space>
-        );
-      },
-    },
-    {
-      title: '九宫格',
-      dataIndex: 'grid',
-      width: 80,
-      render: (v: string) => (
-        <Tag style={{ borderRadius: 6, background: 'var(--teal-soft)', color: 'var(--teal)', borderColor: 'transparent' }}>
-          {v}
-        </Tag>
-      ),
-    },
-    {
-      title: '月薪（敏感）',
-      dataIndex: 'salary',
-      width: 130,
-      render: (v: number) => (
-        <MaskedField value={v} format={(x) => `¥ ${Number(x).toLocaleString()}`} />
-      ),
-    },
-    {
-      title: '标签',
-      dataIndex: 'tags',
-      render: (tags: string[]) => (
-        <Space size={4} wrap>
-          {tags.slice(0, 2).map((t) => (
-            <Tag key={t} style={{ borderRadius: 6, fontSize: 11, borderColor: 'var(--line)', background: 'var(--surface-sunken)', color: 'var(--ink-2)' }}>
-              {t}
-            </Tag>
-          ))}
-        </Space>
-      ),
-    },
-    {
-      title: '风险',
-      dataIndex: 'risk',
-      width: 90,
-      render: (v: Employee['risk']) => {
-        const r = RISK_LABEL[v];
-        return (
-          <Tag style={{ borderRadius: 6, background: r.bg, color: r.fg, borderColor: 'transparent' }}>
-            {r.text}
+          <Tag style={{ borderRadius: 6, background: c?.bg ?? 'var(--surface-sunken)', color: c?.fg ?? 'var(--ink-3)', borderColor: 'transparent', width: 24, textAlign: 'center' }}>
+            {v}
           </Tag>
         );
       },
     },
+    {
+      title: '直接上级',
+      dataIndex: 'manager_name',
+      width: 120,
+      render: (v: string | null, row) =>
+        v ? (
+          <Link to={`/app/employee-detail?id=${row.manager_id}`}>{v}</Link>
+        ) : (
+          <span style={{ color: 'var(--ink-4)' }}>—</span>
+        ),
+    },
+    {
+      title: '状态',
+      dataIndex: 'is_active',
+      width: 70,
+      render: (v: boolean) => (
+        <Tag style={{ borderRadius: 6, background: v ? 'var(--sage-soft)' : 'var(--danger-soft)', color: v ? 'var(--sage)' : 'var(--danger)', borderColor: 'transparent' }}>
+          {v ? '在职' : '离职'}
+        </Tag>
+      ),
+    },
   ];
+
+  if (loading) return <Spin style={{ display: 'block', padding: 80 }} />;
 
   return (
     <div className="page" style={{ maxWidth: 1560 }}>
@@ -191,13 +163,13 @@ export function Roster() {
         <div>
           <h1 className="page-title font-serif">员工花名册</h1>
           <div className="page-subtitle">
-            当前视角（{meta?.label}）可见 {scoped.length} 人 · 薪酬字段按角色掩码
+            当前视角（{meta?.label}）可见 {employees.length} 人
           </div>
         </div>
         <Can roles={['hr']}>
           <Button
             icon={<DownloadOutlined />}
-            onClick={() => message.info('原型演示：导出需二次授权，集成版提供水印与审计')}
+            onClick={() => message.info('导出功能将在后续版本提供')}
           >
             导出名册
           </Button>
@@ -205,24 +177,19 @@ export function Roster() {
       </div>
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
+        <Col span={8}>
           <Card variant="borderless" style={{ background: 'var(--surface)' }}>
             <Statistic title="可见员工" value={stats.total} suffix="人" />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={8}>
           <Card variant="borderless" style={{ background: 'var(--surface)' }}>
-            <Statistic title="核心岗位" value={stats.core} suffix="人" />
+            <Statistic title="在职" value={stats.active} suffix="人" />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={8}>
           <Card variant="borderless" style={{ background: 'var(--surface)' }}>
-            <Statistic title="高离职风险" value={stats.highRisk} suffix="人" />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--surface)' }}>
-            <Statistic title="平均绩效分" value={stats.avgScore} suffix="分" />
+            <Statistic title="部门数" value={depts.length - 1} suffix="个" />
           </Card>
         </Col>
       </Row>
@@ -243,7 +210,7 @@ export function Roster() {
             style={{ minWidth: 160 }}
             value={dept}
             onChange={setDept}
-            options={departments
+            options={depts
               .filter((d) => d.id !== '0')
               .map((d) => ({ value: d.id, label: d.name }))}
           />
@@ -253,7 +220,7 @@ export function Roster() {
             style={{ minWidth: 100 }}
             value={grade}
             onChange={setGrade}
-            options={[...new Set(allEmployees.map((e) => e.grade))]
+            options={[...new Set(employees.map((e) => e.grade))]
               .sort()
               .map((g) => ({ value: g, label: g }))}
           />
@@ -276,7 +243,7 @@ export function Roster() {
           dataSource={list}
           columns={columns}
           pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 人` }}
-          scroll={{ x: 1280 }}
+          scroll={{ x: 1080 }}
         />
       </Card>
     </div>

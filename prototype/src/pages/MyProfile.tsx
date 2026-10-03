@@ -1,10 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Card, Col, Empty, Row, Space, Steps, Tag, Timeline } from 'antd';
+import { Alert, Button, Card, Col, Empty, Row, Space, Steps, Tag, Timeline } from 'antd';
 import { useAuth } from '@/store/auth';
-import { employeeById } from '@/mock/people';
-import { DIMENSION_NAME, PROFILE_DIMENSIONS, latestProfile, profileVersions } from '@/mock/profiles';
+import { profilesApi, type ProfileOut, type ProfileVersionItem } from '@/api/profiles';
 import { RadarChart } from '@/components/RadarChart';
+import { message } from 'antd';
+
+const DIMENSION_NAME: Record<string, string> = {
+  basic: '基本条件',
+  biz: '业绩',
+  contribution: '团队贡献',
+  duty: '职责履行',
+  knowledge: '知识技能',
+  ability: '能力素质',
+  perf: '绩效',
+};
+
+const DIM_KEYS = ['basic', 'biz', 'contribution', 'duty', 'knowledge', 'ability', 'perf'];
 
 const GRADE_COLOR: Record<string, string> = {
   优: 'var(--sage)',
@@ -15,21 +27,117 @@ const GRADE_COLOR: Record<string, string> = {
 
 export function MyProfile() {
   const persona = useAuth((s) => s.persona);
-  const emp = employeeById(persona?.employeeId);
-  const versions = emp ? profileVersions(emp.id) : [];
-  const latest = emp ? latestProfile(emp.id) : undefined;
-  const [selected, setSelected] = useState(versions.length);
-  const current = versions[selected - 1] ?? latest;
+  const employeeId = persona?.employeeId;
+  const [versions, setVersions] = useState<ProfileVersionItem[] | null>(null);
+  const [latest, setLatest] = useState<ProfileOut | null>(null);
+  const [selected, setSelected] = useState(1);
+  const [current, setCurrent] = useState<ProfileOut | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!employeeId) {
+      setError('当前账号无员工档案');
+      return;
+    }
+    Promise.all([
+      profilesApi.versions(employeeId).catch(() => {
+        message.error('画像版本加载失败');
+        return [] as ProfileVersionItem[];
+      }),
+      profilesApi.latest(employeeId).catch(() => {
+        message.error('最新画像加载失败');
+        return null as ProfileOut | null;
+      }),
+    ]).then(([vers, lat]) => {
+      setVersions(vers);
+      setLatest(lat);
+      if (vers.length > 0) {
+        setSelected(vers[vers.length - 1].version_seq);
+      }
+      setCurrent(lat);
+      setError(null);
+    });
+  }, [employeeId]);
+
+  // 切换版本时加载对应快照
+  useEffect(() => {
+    if (!employeeId || !versions || selected === latest?.version_seq) {
+      setCurrent(latest);
+      return;
+    }
+    const found = versions.find((v) => v.version_seq === selected);
+    if (!found) {
+      setCurrent(latest);
+      return;
+    }
+    profilesApi
+      .versionDetail(employeeId, selected)
+      .then((p) => setCurrent(p))
+      .catch(() => {
+        message.error('历史版本加载失败');
+        setCurrent(latest);
+      });
+  }, [selected, employeeId, versions, latest]);
+
+  if (error) {
+    return (
+      <div className="page" style={{ maxWidth: 720 }}>
+        <Alert type="warning" showIcon message={error} />
+      </div>
+    );
+  }
+
+  if (versions === null) {
+    return (
+      <div style={{ textAlign: 'center', padding: 80 }}>
+        <Tag>画像加载中…</Tag>
+      </div>
+    );
+  }
 
   if (!current) {
     return (
       <div className="page" style={{ maxWidth: 720 }}>
         <Empty description="画像数据生成中，请等待季度画像批次" />
+        <Button
+          style={{ marginTop: 16 }}
+          onClick={() => {
+            if (!employeeId) return;
+            profilesApi
+              .regenerateMe()
+              .then((p) => {
+                setLatest(p);
+                setCurrent(p);
+                setVersions((prev) => [
+                  ...(prev ?? []),
+                  {
+                    version_seq: p.version_seq,
+                    source: p.source,
+                    overall: p.overall,
+                    generated_at: p.generated_at,
+                  },
+                ]);
+                setSelected(p.version_seq);
+                message.success('画像已重新生成');
+              })
+              .catch(() => message.error('画像生成失败'));
+          }}
+        >
+          重新生成我的画像
+        </Button>
       </div>
     );
   }
 
-  const prev = versions[selected - 2];
+  const prev = versions && selected > 1
+    ? versions.find((v) => v.version_seq === selected - 1)
+    : undefined;
+
+  const currentDims = new Map(current.dimensions.map((d) => [d.dimension_key, d]));
+  const prevOverall = prev?.overall ?? null;
+  const overallDelta = prevOverall !== null && current.overall !== null
+    ? (current.overall as number) - (prevOverall as number)
+    : undefined;
 
   return (
     <div className="page" style={{ maxWidth: 1200 }}>
@@ -37,96 +145,112 @@ export function MyProfile() {
         <div>
           <h1 className="page-title font-serif">我的画像</h1>
           <div className="page-subtitle">
-            {current.version} · 生成于 {current.generatedAt} · 来源：{current.source} · 画像按周期生成、版本可追溯
+            v{current.version_seq} · 生成于 {current.generated_at?.slice(0, 10)} · 来源：{current.source} · 画像按周期生成、版本可追溯
           </div>
         </div>
+        <Button
+          onClick={() => {
+            if (!employeeId) return;
+            profilesApi
+              .regenerateMe()
+              .then((p) => {
+                setLatest(p);
+                setCurrent(p);
+                message.success('画像已重新生成');
+              })
+              .catch(() => message.error('画像生成失败'));
+          }}
+        >
+          重新生成
+        </Button>
       </div>
 
       <Row gutter={16}>
         <Col span={10}>
-          <Card variant="borderless" style={{ background: 'var(--surface)' }} title={`综合分 ${current.overall}`}>
-            {versions.length > 1 && (
+          <Card variant="borderless" style={{ background: 'var(--surface)' }} title={`综合分 ${current.overall ?? '—'}`}>
+            {versions && versions.length > 1 && (
               <Steps
                 size="small"
-                current={selected - 1}
-                onChange={(v) => setSelected(v + 1)}
-                items={versions.map((v) => ({ title: v.version.replace('v', '') }))}
+                current={versions.findIndex((v) => v.version_seq === selected)}
+                onChange={(v) => setSelected(versions[v].version_seq)}
+                items={versions.map((v) => ({ title: `v${v.version_seq}` }))}
                 style={{ marginBottom: 8 }}
               />
             )}
             <RadarChart
               height={280}
               series={[
-                { name: '当前版本', values: PROFILE_DIMENSIONS.map((d) => current.dims[d.key].score), color: '#d96a8e' },
-                ...(prev ? [{ name: '上一版本', values: PROFILE_DIMENSIONS.map((d) => prev.dims[d.key].score), color: '#7fb5d6' }] : []),
+                {
+                  name: '当前版本',
+                  values: DIM_KEYS.map((k) => currentDims.get(k)?.score ?? 0),
+                  color: '#d96a8e',
+                },
               ]}
             />
-            {prev && (
+            {prev && prevOverall !== null && current.overall !== null && overallDelta !== undefined && (
               <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink-3)', marginTop: -4 }}>
-                虚线为上一版本（{prev.version}，综合 {prev.overall}）· 较上版{' '}
-                <span style={{ color: current.overall >= prev.overall ? 'var(--sage)' : 'var(--danger)' }}>
-                  {current.overall >= prev.overall ? '+' : ''}
-                  {current.overall - prev.overall}
+                上一版综合 {prevOverall} · 较上版{' '}
+                <span style={{ color: overallDelta >= 0 ? 'var(--sage)' : 'var(--danger)' }}>
+                  {overallDelta >= 0 ? '+' : ''}
+                  {overallDelta}
                 </span>
               </div>
             )}
           </Card>
 
-          <Card variant="borderless" style={{ background: 'var(--surface)', marginTop: 16 }} title="画像版本历史" size="small">
-            <Timeline
-              items={versions
-                .slice()
-                .reverse()
-                .map((v, idx) => ({
-                  color: idx === 0 ? 'var(--clay)' : 'var(--teal)',
-                  children: (
-                    <>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{v.version} · 综合 {v.overall}</div>
-                      <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-                        {v.generatedAt} · {v.source}
-                      </div>
-                    </>
-                  ),
-                }))}
-            />
-          </Card>
+          {versions && versions.length > 0 && (
+            <Card variant="borderless" style={{ background: 'var(--surface)', marginTop: 16 }} title="画像版本历史" size="small">
+              <Timeline
+                items={[...versions]
+                  .reverse()
+                  .map((v, idx) => ({
+                    color: idx === 0 ? 'var(--clay)' : 'var(--teal)',
+                    children: (
+                      <>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>v{v.version_seq} · 综合 {v.overall ?? '—'}</div>
+                        <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                          {v.generated_at?.slice(0, 10)} · {v.source}
+                        </div>
+                      </>
+                    ),
+                  }))}
+              />
+            </Card>
+          )}
         </Col>
 
         <Col span={14}>
           <Card
             variant="borderless"
             style={{ background: 'var(--surface)', marginBottom: 16 }}
-            title="AI 画像解读"
+            title="画像维度明细"
             extra={<span className="ai-badge">AI 生成 · 可溯源</span>}
           >
-            <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 2 }}>{current.summary}</div>
-          </Card>
-
-          <Card variant="borderless" style={{ background: 'var(--surface)' }} title="七维明细">
             <Space direction="vertical" size={0} style={{ width: '100%' }}>
-              {PROFILE_DIMENSIONS.map((dim) => {
-                const cur = current.dims[dim.key];
-                const p = prev?.dims[dim.key];
-                const delta = p ? cur.score - p.score : undefined;
-                return (
-                  <div
-                    key={dim.key}
-                    style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 0', borderBottom: '1px dashed var(--line)' }}
-                  >
-                    <span style={{ width: 64, fontSize: 13, fontWeight: 600 }}>{DIMENSION_NAME[dim.key]}</span>
-                    <div style={{ flex: 1, height: 8, background: 'var(--surface-sunken)', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{ width: `${cur.score}%`, height: '100%', background: GRADE_COLOR[cur.grade], borderRadius: 4 }} />
+              {DIM_KEYS.map((key) => {
+                const cur = currentDims.get(key);
+                if (!cur) {
+                  return (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 0', borderBottom: '1px dashed var(--line)' }}>
+                      <span style={{ width: 64, fontSize: 13, fontWeight: 600 }}>{DIMENSION_NAME[key]}</span>
+                      <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>未测评</span>
                     </div>
-                    <span className="num" style={{ width: 30, textAlign: 'right', fontSize: 14, fontWeight: 700 }}>{cur.score}</span>
-                    <Tag style={{ borderRadius: 6, borderColor: 'transparent', background: 'var(--surface-sunken)', color: GRADE_COLOR[cur.grade], fontSize: 11 }}>{cur.grade}</Tag>
-                    <span style={{ width: 300, fontSize: 12, color: 'var(--ink-3)' }}>
-                      {cur.note}
-                      {delta !== undefined && delta !== 0 && (
-                        <span style={{ color: delta > 0 ? 'var(--sage)' : 'var(--danger)', marginLeft: 6 }}>
-                          （{delta > 0 ? '+' : ''}
-                          {delta}）
-                        </span>
-                      )}
+                  );
+                }
+                const score = cur.score ?? 0;
+                const gradeLabel = cur.grade_label ?? '';
+                return (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 0', borderBottom: '1px dashed var(--line)' }}>
+                    <span style={{ width: 64, fontSize: 13, fontWeight: 600 }}>{DIMENSION_NAME[key]}</span>
+                    <div style={{ flex: 1, height: 8, background: 'var(--surface-sunken)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ width: `${score}%`, height: '100%', background: GRADE_COLOR[gradeLabel] ?? 'var(--teal)', borderRadius: 4 }} />
+                    </div>
+                    <span className="num" style={{ width: 30, textAlign: 'right', fontSize: 14, fontWeight: 700 }}>{score}</span>
+                    {gradeLabel && (
+                      <Tag style={{ borderRadius: 6, borderColor: 'transparent', background: 'var(--surface-sunken)', color: GRADE_COLOR[gradeLabel] ?? 'var(--ink-2)', fontSize: 11 }}>{gradeLabel}</Tag>
+                    )}
+                    <span style={{ flex: 1, fontSize: 12, color: 'var(--ink-3)' }}>
+                      {cur.note ?? ''}
                     </span>
                   </div>
                 );

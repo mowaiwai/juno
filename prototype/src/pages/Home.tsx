@@ -1,26 +1,52 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, Table, Tag, Progress, Button, Alert } from 'antd';
+import { Alert, Button, Card, Progress, Spin, Table, Tag, message } from 'antd';
 import { ArrowRightOutlined, SafetyOutlined } from '@ant-design/icons';
-import { useAuth, useActiveRoleMeta, useDataScope } from '@/store/auth';
-import { employees as allEmployees } from '@/mock/people';
-import { deptName } from '@/mock/org';
-import { MaskedField } from '@/components/MaskedField';
+import { useAuth, useActiveRoleMeta } from '@/store/auth';
+import { employeesApi, type EmployeeDirectoryItem } from '@/api/employees';
+import { orgApi, makeDeptName } from '@/api/org';
 import { Can } from '@/components/Can';
 import { pageRegistry } from '@/app/registry';
+import { ApiError } from '@/api/client';
 
 export function Home() {
   const persona = useAuth((s) => s.persona);
   const activeRole = useAuth((s) => s.activeRole);
   const meta = useActiveRoleMeta();
-  const scope = useDataScope();
 
-  const visible = useMemo(() => scope(allEmployees), [scope]);
+  const [employees, setEmployees] = useState<EmployeeDirectoryItem[] | null>(null);
+  const [deptNameFn, setDeptNameFn] = useState<((id: string) => string) | null>(null);
 
   const progress = useMemo(() => {
     const done = pageRegistry.filter((p) => p.done && !p.dev).length;
     const total = pageRegistry.filter((p) => !p.dev).length;
     return { done, total, pct: Math.round((done / total) * 100) };
+  }, []);
+
+  const isHr = activeRole === 'hr';
+
+  useEffect(() => {
+    if (!isHr) {
+      setEmployees(null);
+      return;
+    }
+    setEmployees(null);
+    employeesApi
+      .list()
+      .then(setEmployees)
+      .catch((e: unknown) => {
+        setEmployees([]);
+        message.error(e instanceof ApiError ? e.message : '员工目录加载失败');
+      });
+  }, [isHr]);
+
+  useEffect(() => {
+    orgApi
+      .departments()
+      .then((depts) => setDeptNameFn(() => makeDeptName(depts)))
+      .catch(() => {
+        setDeptNameFn(() => (id: string) => id);
+      });
   }, []);
 
   if (!persona || !activeRole || !meta) return null;
@@ -29,9 +55,7 @@ export function Home() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1 className="page-title font-serif">
-            你好，{persona.name}
-          </h1>
+          <h1 className="page-title font-serif">你好，{persona.name}</h1>
           <div className="page-subtitle">
             当前以「{meta.label}」视角使用系统 · {persona.tenantName}
           </div>
@@ -63,10 +87,7 @@ export function Home() {
         <Card variant="borderless" style={{ background: 'var(--surface)' }}>
           <div style={{ color: 'var(--ink-3)', fontSize: 12 }}>可见员工数</div>
           <div className="num" style={{ fontSize: 30, fontWeight: 650 }}>
-            {visible.length}
-            <span style={{ fontSize: 13, color: 'var(--ink-3)', marginLeft: 6 }}>
-              / {allEmployees.length} 名样本
-            </span>
+            {isHr ? (employees?.length ?? '—') : 1}
           </div>
         </Card>
         <Card variant="borderless" style={{ background: 'var(--surface)' }}>
@@ -125,60 +146,78 @@ export function Home() {
         />
       </Can>
 
-      <Card
-        title="视角验证 · 当前角色可见的员工"
-        variant="borderless"
-        style={{ background: 'var(--surface)' }}
+      <Can
+        roles={['hr']}
+        fallback={
+          <Card variant="borderless" style={{ background: 'var(--surface)' }}>
+            <Alert
+              type="info"
+              showIcon
+              message="切换到 HR 视角可查看完整员工目录"
+            />
+          </Card>
+        }
       >
-        <Table
-          rowKey="id"
-          size="middle"
-          dataSource={visible}
-          pagination={false}
-          columns={[
-            {
-              title: '姓名',
-              dataIndex: 'name',
-              render: (v, row) => (
-                <Link to={`/app/employee-detail?id=${row.id}`}>
-                  {v}
-                </Link>
-              ),
-            },
-            {
-              title: '部门',
-              dataIndex: 'deptId',
-              render: (v: string) => deptName(v),
-            },
-            { title: '职级', dataIndex: 'grade' },
-            {
-              title: '2025 绩效',
-              dataIndex: 'perf',
-              render: (v: string) => (
-                <Tag
-                  style={{
-                    borderRadius: 6,
-                    background: 'var(--surface-sunken)',
-                    borderColor: 'var(--line)',
-                  }}
-                >
-                  {v}
-                </Tag>
-              ),
-            },
-            {
-              title: '月薪（敏感）',
-              dataIndex: 'salary',
-              render: (v: number) => (
-                <MaskedField
-                  value={v}
-                  format={(x) => `¥ ${Number(x).toLocaleString()}`}
-                />
-              ),
-            },
-          ]}
-        />
-      </Card>
+        <Card
+          title="员工目录 · 全租户"
+          variant="borderless"
+          style={{ background: 'var(--surface)' }}
+        >
+          {employees === null ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Spin />
+            </div>
+          ) : employees.length === 0 ? (
+            <Alert type="info" showIcon message="暂无员工数据" />
+          ) : (
+            <Table
+              rowKey="id"
+              size="middle"
+              dataSource={employees}
+              pagination={false}
+              columns={[
+                {
+                  title: '姓名',
+                  dataIndex: 'name',
+                  render: (v: string, row: EmployeeDirectoryItem) => (
+                    <Link to={`/app/employee-detail?id=${row.id}`}>{v}</Link>
+                  ),
+                },
+                {
+                  title: '部门',
+                  dataIndex: 'dept_id',
+                  render: (v: string) => (deptNameFn ? deptNameFn(v) : v),
+                },
+                { title: '岗位', dataIndex: 'position' },
+                { title: '职级', dataIndex: 'grade' },
+                {
+                  title: '绩效',
+                  dataIndex: 'perf_grade',
+                  render: (v: string | null) =>
+                    v ? (
+                      <Tag
+                        style={{
+                          borderRadius: 6,
+                          background: 'var(--surface-sunken)',
+                          borderColor: 'var(--line)',
+                        }}
+                      >
+                        {v}
+                      </Tag>
+                    ) : (
+                      '—'
+                    ),
+                },
+                {
+                  title: '直接上级',
+                  dataIndex: 'manager_name',
+                  render: (v: string | null) => v ?? '—',
+                },
+              ]}
+            />
+          )}
+        </Card>
+      </Can>
     </div>
   );
 }

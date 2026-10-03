@@ -70,6 +70,44 @@ a {
   border-radius: var(--radius);
 }
 
+/* 应用容器（数据中枢 / 应用中心）：飞轮文案行 + 内嵌页面去重边距 */
+.app-wheel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+
+.app-wheel-tag {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--clay-hover);
+  background: var(--clay-soft);
+  border-radius: 4px;
+  padding: 1px 7px;
+  flex-shrink: 0;
+}
+
+.app-wheel-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.app-container .ant-tabs-tabpane > .page {
+  padding: 0;
+  max-width: none;
+}
+
+.app-container .ant-tabs-tabpane > .page .page-header {
+  margin-top: 4px;
+  margin-bottom: 16px;
+}
+
 /* AntD 暖纸微调 */
 .ant-table-wrapper .ant-table {
   background: transparent;

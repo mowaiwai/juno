@@ -1,20 +1,28 @@
-import { useMemo, useState } from 'react';
-import { Card, Col, Row, Select, Space, Table, Tag } from 'antd';
+import { useEffect, useState } from 'react';
+import { Card, Col, Row, Select, Space, Spin, Table, Tag, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { departments } from '@/mock/org';
-import { ACTION_LABEL, ACTION_COLOR, teamGapBoard } from '@/mock/gap';
-import type { ActionRoute } from '@/mock/gap';
+import { gapApi, ACTION_LABEL, ACTION_COLOR, type TeamGapOut } from '@/api/gap';
+
+const ACT_LABEL = ACTION_LABEL as Record<string, string>;
+const ACT_COLOR = ACTION_COLOR as Record<string, string>;
 
 export function GapBoard() {
   const navigate = useNavigate();
   const [deptId, setDeptId] = useState<string>('all');
-  const board = useMemo(() => {
-    if (deptId === 'all') return teamGapBoard();
-    return teamGapBoard(deptId);
+  const [board, setBoard] = useState<TeamGapOut[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    gapApi.team(deptId === 'all' ? undefined : deptId)
+      .then(setBoard)
+      .catch(() => message.error('加载团队差距失败'))
+      .finally(() => setLoading(false));
   }, [deptId]);
 
-  const totalGaps = board.reduce((s, r) => s + r.gapCount, 0);
-  const highGaps = board.reduce((s, r) => s + r.highCount, 0);
+  const totalGaps = board.reduce((s, r) => s + r.gap_count, 0);
+  const highGaps = board.reduce((s, r) => s + r.high_count, 0);
 
   return (
     <div className="page" style={{ maxWidth: 1400 }}>
@@ -62,43 +70,45 @@ export function GapBoard() {
       </Row>
 
       <Card variant="borderless" style={{ background: 'var(--surface)' }} title="团队差距清单" size="small">
-        <Table
-          rowKey="employeeId"
-          dataSource={board}
-          pagination={{ pageSize: 10 }}
-          onRow={(r) => ({ onClick: () => navigate(`/app/gap-action?emp=${r.employeeId}`), style: { cursor: 'pointer' } })}
-          columns={[
-            { title: '员工', render: (_: unknown, r) => (
-              <Space>
-                <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--clay-soft)', color: 'var(--clay)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>{r.name[0]}</span>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{r.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{r.position}</div>
-                </div>
-              </Space>
-            )},
-            { title: '部门', dataIndex: 'deptName' },
-            { title: '差距数', dataIndex: 'gapCount', sorter: (a, b) => a.gapCount - b.gapCount },
-            {
-              title: '高严重度',
-              dataIndex: 'highCount',
-              render: (v: number) => v > 0 ? <Tag color="red" style={{ borderRadius: 6 }}>{v}</Tag> : '-',
-            },
-            {
-              title: '动作路由',
-              dataIndex: 'actions',
-              render: (actions: ActionRoute[]) => (
-                <Space size={4} wrap>
-                  {actions.map((a) => (
-                    <Tag key={a} style={{ borderRadius: 6, background: ACTION_COLOR[a] + '22', color: ACTION_COLOR[a], borderColor: 'transparent' }}>
-                      {ACTION_LABEL[a]}
-                    </Tag>
-                  ))}
+        <Spin spinning={loading}>
+          <Table<TeamGapOut>
+            rowKey="employee_id"
+            dataSource={board}
+            pagination={{ pageSize: 10 }}
+            onRow={(r) => ({ onClick: () => navigate(`/app/gap-action?emp=${r.employee_id}`), style: { cursor: 'pointer' } })}
+            columns={[
+              { title: '员工', render: (_, r) => (
+                <Space>
+                  <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--clay-soft)', color: 'var(--clay)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>{r.name[0]}</span>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{r.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{r.position}</div>
+                  </div>
                 </Space>
-              ),
-            },
-          ]}
-        />
+              )},
+              { title: '部门', dataIndex: 'dept_name' },
+              { title: '差距数', dataIndex: 'gap_count', sorter: (a, b) => a.gap_count - b.gap_count },
+              {
+                title: '高严重度',
+                dataIndex: 'high_count',
+                render: (v: number) => v > 0 ? <Tag color="red" style={{ borderRadius: 6 }}>{v}</Tag> : '-',
+              },
+              {
+                title: '动作路由',
+                dataIndex: 'actions',
+                render: (actions: string[]) => (
+                  <Space size={4} wrap>
+                    {actions.map((a) => (
+                      <Tag key={a} style={{ borderRadius: 6, background: ACT_COLOR[a] + '22', color: ACT_COLOR[a], borderColor: 'transparent' }}>
+                        {ACT_LABEL[a]}
+                      </Tag>
+                    ))}
+                  </Space>
+                ),
+              },
+            ]}
+          />
+        </Spin>
       </Card>
     </div>
   );

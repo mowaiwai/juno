@@ -4,13 +4,41 @@ import type { Persona, RoleCode } from '@/types';
 import { personas } from '@/mock/people';
 import { employeeById } from '@/mock/people';
 import { ROLE_META, visibleEmployeeIds } from '@/auth/rbac';
+import { USE_MOCK } from '@/api/config';
+import { authApi, BACKEND_ROLE_MAP, type MeResponse } from '@/api/auth';
+import { setToken } from '@/api/client';
 
 interface AuthState {
   persona: Persona | null;
   activeRole: RoleCode | null;
-  login: (personaId: string, role?: RoleCode) => void;
+  /** mock：personaId；真实：邮箱+密码 */
+  login: (idOrEmail: string, passwordOrRole?: string) => Promise<void>;
   logout: () => void;
   switchRole: (role: RoleCode) => void;
+  /** 应用启动：真实模式下有 token 则恢复会话 */
+  bootstrap: () => Promise<void>;
+}
+
+function personaFromMe(me: MeResponse): Persona {
+  const defaultRole = BACKEND_ROLE_MAP[me.role] ?? 'employee';
+  // 全量角色集 → 前端 RoleCode，去重；映射不到的后端角色（如 exec 无对应）跳过
+  const mapped = (me.roles ?? [me.role])
+    .map((r) => BACKEND_ROLE_MAP[r])
+    .filter((r): r is RoleCode => !!r);
+  const roles = [...new Set<RoleCode>([defaultRole, ...mapped])];
+  return {
+    id: me.id,
+    employeeId: me.employee_id ?? me.id,
+    name: me.name,
+    title: ROLE_META[defaultRole].label,
+    roles,
+    defaultRole,
+    tenantId: me.tenant_id,
+    tenantName: '',
+    blurb: '',
+    family: me.family ?? undefined,
+    grade: me.grade ?? undefined,
+  };
 }
 
 export const useAuth = create<AuthState>()(
@@ -18,31 +46,59 @@ export const useAuth = create<AuthState>()(
     (set) => ({
       persona: null,
       activeRole: null,
-      login: (personaId, role) => {
-        const persona = personas.find((p) => p.id === personaId) ?? null;
-        if (persona) {
-          set({ persona, activeRole: role ?? persona.defaultRole });
+      login: async (idOrEmail, passwordOrRole) => {
+        if (USE_MOCK) {
+          const persona = personas.find((p) => p.id === idOrEmail) ?? null;
+          if (persona) {
+            set({ persona, activeRole: passwordOrRole as RoleCode ?? persona.defaultRole });
+          }
+          return;
         }
+        const { access_token } = await authApi.login(
+          idOrEmail,
+          passwordOrRole ?? '',
+        );
+        setToken(access_token);
+        const me = await authApi.me();
+        const persona = personaFromMe(me);
+        set({ persona, activeRole: persona.defaultRole });
       },
-      logout: () => set({ persona: null, activeRole: null }),
+      logout: () => {
+        setToken(null);
+        set({ persona: null, activeRole: null });
+      },
       switchRole: (role) =>
         set((s) =>
           s.persona && s.persona.roles.includes(role)
             ? { activeRole: role }
             : s,
         ),
+      bootstrap: async () => {
+        if (USE_MOCK) return;
+        try {
+          const me = await authApi.me();
+          const persona = personaFromMe(me);
+          set({ persona, activeRole: persona.defaultRole });
+        } catch {
+          setToken(null);
+          set({ persona: null, activeRole: null });
+        }
+      },
     }),
     {
       name: 'hr-prototype-auth',
       storage: createJSONStorage(() => sessionStorage),
-      partialize: (s) => ({
-        persona: s.persona
-          ? { id: s.persona.id }
-          : null,
-        activeRole: s.activeRole,
-      }),
-      // 持久化的只是 personaId，merge 时还原为完整 persona
+      partialize: (s) =>
+        USE_MOCK
+          ? {
+              persona: s.persona ? { id: s.persona.id } : null,
+              activeRole: s.activeRole,
+            }
+          : // 真实模式：会话由 token(bootstrap) 恢复，不持久化 persona
+            { persona: null, activeRole: null },
+      // mock：持久化 personaId，merge 时还原完整 persona
       merge: (persisted, current) => {
+        if (!USE_MOCK) return current;
         const saved = (persisted ?? {}) as Partial<AuthState> & {
           persona?: { id?: string } | null;
         };
@@ -64,8 +120,8 @@ export function useActiveRoleMeta() {
 }
 
 /**
- * 数据范围原语：按当前视角过滤员工类列表。
- * 真实系统由服务端按 tenant × role × 组织树过滤。
+ * 数据范围原语（mock 模式）：按当前视角过滤员工类列表。
+ * 真实模式由服务端按 tenant × role × 组织树过滤，此函数不再用于已接线页面。
  */
 export function useDataScope() {
   const persona = useAuth((s) => s.persona);

@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { Card, Col, Progress, Row, Space, Tag } from 'antd';
+import { Card, Col, Progress, Row, Space, Spin, Tag, message } from 'antd';
 import { employees } from '@/mock/people';
-import { threeCharts } from '@/mock/inventory';
+import { orgApi, type ThreeChartsOut } from '@/api/orgDiagnosis';
 
 const NIGHT = '#1b1a18';
 const NIGHT_2 = '#26241f';
@@ -10,7 +11,24 @@ const NIGHT_INK = '#ece7dd';
 const NIGHT_INK_2 = '#a9a294';
 
 export function ThreeCharts() {
-  const tc = threeCharts;
+  const [tc, setTc] = useState<ThreeChartsOut | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    orgApi.threeCharts()
+      .then(setTc)
+      .catch(() => message.error('加载三张图数据失败'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (!tc) {
+    return (
+      <div style={{ background: NIGHT, minHeight: '100vh', padding: 24, color: NIGHT_INK }}>
+        <Spin spinning={loading} />
+      </div>
+    );
+  }
 
   // 战略图：关键举措 × 人才支撑度
   const strategyOption = {
@@ -19,10 +37,13 @@ export function ThreeCharts() {
     yAxis: { type: 'category', data: tc.strategy.map((s) => s.initiative), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: NIGHT_INK } },
     series: [{
       type: 'bar',
-      data: tc.strategy.map((s) => ({
-        value: s.talentSupport,
-        itemStyle: { color: s.talentSupport >= 75 ? '#7fc49b' : s.talentSupport >= 60 ? '#e3be6b' : '#de7066', borderRadius: [0, 4, 4, 0] },
-      })),
+      data: tc.strategy.map((s) => {
+        const v = Number(s.talent_support);
+        return {
+          value: v,
+          itemStyle: { color: v >= 75 ? '#7fc49b' : v >= 60 ? '#e3be6b' : '#de7066', borderRadius: [0, 4, 4, 0] },
+        };
+      }),
       barWidth: 16,
       label: { show: true, position: 'right', color: NIGHT_INK, formatter: '{c}' },
     }],
@@ -45,15 +66,15 @@ export function ThreeCharts() {
       splitLine: { show: false },
       axisLabel: { show: false },
       detail: { valueAnimation: true, formatter: '{value}%', color: NIGHT_INK, fontSize: 28, fontWeight: 700, offsetCenter: [0, '0%'] },
-      data: [{ value: Math.round(tc.org.successionCoverage * 100) }],
+      data: [{ value: Math.round(tc.org.succession_coverage * 100) }],
     }],
   };
 
   // 人才图：能力×业绩散点 + 意愿度异常标注
   const scatterData = tc.talent.scatter.map((p) => ({
     value: [p.x, p.y, p.size],
-    name: p.empId,
-    itemStyle: { color: tc.talent.willingnessAnomaly.includes(p.empId) ? '#de7066' : '#d96a8e' },
+    name: p.emp_id,
+    itemStyle: { color: tc.talent.willingness_anomaly.includes(p.emp_id) ? '#de7066' : '#d96a8e' },
   }));
   const talentOption = {
     grid: { left: 50, right: 20, top: 30, bottom: 40 },
@@ -66,7 +87,7 @@ export function ThreeCharts() {
         symbolSize: (d: number[]) => d[2],
         label: {
           show: true,
-          formatter: (p: { name: string }) => employees.find((e) => e.id === p.name)?.name ?? '',
+          formatter: (p: { name: string }) => employees.find((e) => e.id === p.name)?.name ?? p.name,
           color: NIGHT_INK,
           fontSize: 10,
           position: 'top',
@@ -97,10 +118,10 @@ export function ThreeCharts() {
           {[
             { label: '关键举措', value: tc.strategy.length, color: '#d96a8e' },
             { label: '部门数', value: tc.org.departments, color: '#e3be6b' },
-            { label: '核心岗位继任覆盖', value: `${Math.round(tc.org.successionCoverage * 100)}%`, color: '#7fb5d6' },
-            { label: 'P4+ 占比', value: `${Math.round(tc.talent.p4PlusRatio * 100)}%`, color: '#7fc49b' },
-            { label: '高潜人数', value: tc.talent.highPotentialCount, color: '#7fb5d6' },
-            { label: '意愿度异常', value: tc.talent.willingnessAnomaly.length, color: '#de7066' },
+            { label: '核心岗位继任覆盖', value: `${Math.round(tc.org.succession_coverage * 100)}%`, color: '#7fb5d6' },
+            { label: 'P4+ 占比', value: `${Math.round(tc.talent.p4_plus_ratio * 100)}%`, color: '#7fc49b' },
+            { label: '高潜人数', value: tc.talent.high_potential_count, color: '#7fb5d6' },
+            { label: '意愿度异常', value: tc.talent.willingness_anomaly.length, color: '#de7066' },
           ].map((s) => (
             <Col span={4} key={s.label}>
               <Card variant="borderless" style={{ background: NIGHT_2, border: `1px solid ${NIGHT_LINE}` }} size="small">
@@ -130,12 +151,12 @@ export function ThreeCharts() {
               <ReactECharts option={orgOption} style={{ height: 200 }} />
               <Space direction="vertical" size={8} style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: NIGHT_INK_2 }}>
-                  <span>核心岗位</span><span className="num" style={{ color: NIGHT_INK }}>{tc.org.keyPositions}</span>
+                  <span>核心岗位</span><span className="num" style={{ color: NIGHT_INK }}>{tc.org.key_positions}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: NIGHT_INK_2 }}>
-                  <span>组织调整</span><span className="num" style={{ color: NIGHT_INK }}>{tc.org.orgChanges} 次</span>
+                  <span>组织调整</span><span className="num" style={{ color: NIGHT_INK }}>{tc.org.org_changes} 次</span>
                 </div>
-                <Progress percent={Math.round(tc.org.successionCoverage * 100)} strokeColor="#7fb5d6" showInfo={false} />
+                <Progress percent={Math.round(tc.org.succession_coverage * 100)} strokeColor="#7fb5d6" showInfo={false} />
               </Space>
             </Card>
           </Col>
@@ -154,8 +175,8 @@ export function ThreeCharts() {
           <div style={{ color: NIGHT_INK_2, fontSize: 13, lineHeight: 1.9 }}>
             本期战略落地整体人才支撑度 <b style={{ color: '#e3be6b' }}>70%</b>，其中「海外建厂」支撑度仅 54%，建议优先补齐运营+质量复合型人才；
             组织继任覆盖率 <b style={{ color: '#7fb5d6' }}>62%</b>，核心岗位仍有断层风险；
-            人才结构 P4+ 占比 <b style={{ color: '#7fc49b' }}>42%</b>，高潜 {tc.talent.highPotentialCount} 人构成核心池，
-            但存在 <b style={{ color: '#ec9c94' }}>{tc.talent.willingnessAnomaly.length} 名意愿度异常员工</b>，建议结合九宫格策略与 IDP 推进。
+            人才结构 P4+ 占比 <b style={{ color: '#7fc49b' }}>42%</b>，高潜 {tc.talent.high_potential_count} 人构成核心池，
+            但存在 <b style={{ color: '#ec9c94' }}>{tc.talent.willingness_anomaly.length} 名意愿度异常员工</b>，建议结合九宫格策略与 IDP 推进。
           </div>
         </Card>
       </div>

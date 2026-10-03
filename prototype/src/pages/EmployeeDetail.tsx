@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Alert,
@@ -6,46 +6,124 @@ import {
   Card,
   Col,
   Descriptions,
+  Empty,
   Progress,
   Row,
   Space,
+  Spin,
   Tag,
+  message,
 } from 'antd';
-import { ArrowLeftOutlined, LockOutlined } from '@ant-design/icons';
-import { employees as allEmployees } from '@/mock/people';
-import { deptName } from '@/mock/org';
-import { bandOf, FAMILY_LABEL } from '@/mock/channels';
-import { useAuth, useDataScope, useActiveRoleMeta } from '@/store/auth';
-import { MaskedField } from '@/components/MaskedField';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+import { useAuth, useActiveRoleMeta } from '@/store/auth';
+import { employeesApi, type EmployeeDetailItem } from '@/api/employees';
+import { orgApi, makeDeptName, type ChannelFamily, type GradeBand } from '@/api/org';
+import { profilesApi, type ProfileOut } from '@/api/profiles';
+import { applicationsApi, APPLICATION_STATUS_META, type ApplicationListItemDTO, type ApplicationStatusValue } from '@/api/applications';
 
-const POTENTIAL_LABEL: Record<string, string> = {
-  HIGH: '高潜',
-  MID: '中潜',
-  LOW: '待发展',
-};
+const IN_FLIGHT_STATUSES: ApplicationStatusValue[] = [
+  'draft',
+  'submitted',
+  'in_manager_review',
+  'in_committee_review',
+  'approved',
+];
+
+function yearsSince(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const diff = Date.now() - d.getTime();
+  return Math.round((diff / (365.25 * 24 * 3600 * 1000)) * 10) / 10;
+}
 
 export function EmployeeDetail() {
   const [params] = useSearchParams();
   const persona = useAuth((s) => s.persona);
   const meta = useActiveRoleMeta();
-  const scope = useDataScope();
 
   const id = params.get('id') ?? persona?.employeeId;
-  const emp = useMemo(() => {
-    if (!id) return undefined;
-    const visible = scope(allEmployees);
-    return visible.find((e) => e.id === id);
-  }, [id, scope]);
+  const isSelf = id === persona?.employeeId;
 
-  if (!emp) {
+  const [emp, setEmp] = useState<EmployeeDetailItem | null | undefined>(undefined);
+  const [depts, setDepts] = useState<ReturnType<typeof makeDeptName> | null>(null);
+  const [band, setBand] = useState<GradeBand | null>(null);
+  const [familyName, setFamilyName] = useState<string>('');
+  const [profile, setProfile] = useState<ProfileOut | null>(null);
+  const [apps, setApps] = useState<ApplicationListItemDTO[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) {
+      setError('缺少员工 id');
+      return;
+    }
+
+    Promise.all([
+      employeesApi.getById(id).catch(() => {
+        message.error('员工档案加载失败');
+        return null as EmployeeDetailItem | null;
+      }),
+      orgApi.departments().catch(() => {
+        message.error('部门数据加载失败');
+        return [];
+      }),
+      orgApi.channels().catch(() => {
+        message.error('通道数据加载失败');
+        return [] as ChannelFamily[];
+      }),
+      // 画像：仅 self 或有完整画像权限时请求
+      (isSelf || meta?.seeFullProfile
+        ? profilesApi.latest(id).catch(() => null as ProfileOut | null)
+        : Promise.resolve(null as ProfileOut | null)),
+      // 认证记录：仅本人可看自己的申请
+      (isSelf
+        ? applicationsApi.mine().catch(() => [] as ApplicationListItemDTO[])
+        : Promise.resolve(null as ApplicationListItemDTO[] | null)),
+    ]).then(([e, deptsList, channels, prof, aps]) => {
+      if (!e) {
+        setError('员工不存在或无权查看');
+        setEmp(null);
+        return;
+      }
+      setEmp(e);
+      setDepts(makeDeptName(deptsList));
+      const fam = channels.find((c) => c.family === e.family);
+      setFamilyName(fam?.name ?? e.family);
+      setBand(fam?.grades.find((g) => g.grade === e.grade) ?? null);
+      setProfile(prof);
+      setApps(aps);
+      setError(null);
+    });
+  }, [id, isSelf, meta]);
+
+  if (error) {
+    return (
+      <div className="page" style={{ maxWidth: 720 }}>
+        <Alert type="warning" showIcon message={error} />
+        <Link to="/app/roster">
+          <Button style={{ marginTop: 16 }}>前往花名册</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (emp === undefined || depts === null) {
+    return (
+      <div style={{ textAlign: 'center', padding: 80 }}>
+        <Spin />
+      </div>
+    );
+  }
+
+  if (emp === null) {
     return (
       <div className="page" style={{ maxWidth: 720 }}>
         <Alert
           type="warning"
           showIcon
           message="无法查看该员工档案"
-          description="该员工不在当前角色的数据范围内。请切换角色或从花名册中选择可见员工。"
-          style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
+          description="该员工不存在或你无权查看。请从花名册中选择可见员工。"
         />
         <Link to="/app/roster">
           <Button style={{ marginTop: 16 }}>前往花名册</Button>
@@ -54,8 +132,10 @@ export function EmployeeDetail() {
     );
   }
 
-  const band = bandOf(emp.family, emp.grade);
-  const isSelf = persona?.employeeId === emp.id;
+  const deptNameStr = depts(emp.dept_id);
+  const yearsInGrade = yearsSince(emp.grade_since);
+  const inFlightCert = apps?.find((a) => IN_FLIGHT_STATUSES.includes(a.status));
+  const profileDims = profile ? new Map(profile.dimensions.map((d) => [d.dimension_key, d])) : null;
 
   return (
     <div className="page" style={{ maxWidth: 1080 }}>
@@ -89,40 +169,29 @@ export function EmployeeDetail() {
               <span style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
                 {emp.name}
               </span>
-              <Tag style={{ borderRadius: 6 }}>{emp.id}</Tag>
+              <Tag style={{ borderRadius: 6 }}>{emp.employee_no}</Tag>
               {isSelf && (
                 <Tag style={{ borderRadius: 6, background: 'var(--charcoal)', color: 'var(--paper)', borderColor: 'transparent' }}>
                   本人
                 </Tag>
               )}
-              {emp.isCorePosition && (
-                <Tag style={{ borderRadius: 6, background: 'var(--clay-soft)', color: 'var(--clay-hover)', borderColor: 'transparent' }}>
-                  核心岗位
-                </Tag>
+              {!emp.is_active && (
+                <Tag style={{ borderRadius: 6, background: 'var(--surface-sunken)', color: 'var(--ink-3)' }}>已离职</Tag>
               )}
             </Space>
             <div style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 6 }}>
-              {deptName(emp.deptId)} · {emp.position} · {emp.family} 族（{FAMILY_LABEL[emp.family]}）{emp.sequence} · {emp.grade}
+              {deptNameStr} · {emp.position} · {emp.family} 族（{familyName}）{emp.sequence} · {emp.grade}
             </div>
-            {emp.tags.length > 0 && (
-              <Space size={4} wrap style={{ marginTop: 8 }}>
-                {emp.tags.map((t) => (
-                  <Tag key={t} style={{ borderRadius: 6, fontSize: 12, borderColor: 'var(--line)', background: 'var(--surface-sunken)', color: 'var(--ink-2)' }}>
-                    {t}
-                  </Tag>
-                ))}
-              </Space>
-            )}
           </div>
           {band && (
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>所在职级带宽</div>
               <div className="num" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-                {band.bandRange} · ¥ {band.salaryBand[0].toLocaleString()} ~{' '}
-                {band.salaryBand[1].toLocaleString()}
+                {band.band_range} · ¥ {band.salary_band[0].toLocaleString()} ~{' '}
+                {band.salary_band[1].toLocaleString()}
               </div>
               <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>
-                带宽为制度公开数据 · 个人薪酬见下方
+                带宽为制度公开数据
               </div>
             </div>
           )}
@@ -133,38 +202,33 @@ export function EmployeeDetail() {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card variant="borderless" style={{ background: 'var(--surface)' }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>2025 绩效</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>绩效等级</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-              <span className="num" style={{ fontSize: 26, fontWeight: 700 }}>{emp.perf}</span>
-              <span className="num" style={{ color: 'var(--ink-3)', fontSize: 13 }}>
-                {emp.perfScore} 分
-              </span>
+              <span className="num" style={{ fontSize: 26, fontWeight: 700 }}>{emp.perf_grade ?? '—'}</span>
             </div>
           </Card>
         </Col>
         <Col span={6}>
           <Card variant="borderless" style={{ background: 'var(--surface)' }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>潜力评估</div>
-            <div style={{ marginTop: 4 }}>
-              <Tag style={{ borderRadius: 6, background: emp.potential === 'HIGH' ? 'var(--sage-soft)' : 'var(--surface-sunken)', color: emp.potential === 'HIGH' ? 'var(--sage)' : 'var(--ink-2)', borderColor: 'transparent' }}>
-                {POTENTIAL_LABEL[emp.potential]}
-              </Tag>
-            </div>
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--surface)' }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>九宫格定位</div>
-            <div className="num" style={{ fontSize: 22, fontWeight: 700, marginTop: 2, color: 'var(--teal)' }}>
-              {emp.grid}
-            </div>
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--surface)' }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>司龄</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>本职级年限</div>
             <div className="num" style={{ fontSize: 22, fontWeight: 700, marginTop: 2 }}>
-              {emp.years} 年
+              {yearsInGrade !== null ? `${yearsInGrade} 年` : '—'}
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card variant="borderless" style={{ background: 'var(--surface)' }}>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>直属上级</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>
+              {emp.manager_name ?? '—'}
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card variant="borderless" style={{ background: 'var(--surface)' }}>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>学历</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>
+              {emp.education ?? '—'}
             </div>
           </Card>
         </Col>
@@ -186,66 +250,67 @@ export function EmployeeDetail() {
             >
               <Descriptions.Item label="姓名">{emp.name}</Descriptions.Item>
               <Descriptions.Item label="工号">
-                <span className="num">{emp.id}</span>
+                <span className="num">{emp.employee_no}</span>
               </Descriptions.Item>
-              <Descriptions.Item label="部门">{deptName(emp.deptId)}</Descriptions.Item>
+              <Descriptions.Item label="部门">{deptNameStr}</Descriptions.Item>
               <Descriptions.Item label="岗位">{emp.position}</Descriptions.Item>
               <Descriptions.Item label="职级">{emp.grade}</Descriptions.Item>
-              <Descriptions.Item label="司龄">{emp.years} 年</Descriptions.Item>
-              <Descriptions.Item label="月薪">
-                <MaskedField value={emp.salary} format={(v) => `¥ ${Number(v).toLocaleString()}`} />
+              <Descriptions.Item label="职族">{familyName}</Descriptions.Item>
+              <Descriptions.Item label="序列">{emp.sequence}</Descriptions.Item>
+              <Descriptions.Item label="本职级起">
+                {emp.grade_since ?? '—'}
               </Descriptions.Item>
-              <Descriptions.Item label="薪酬带宽定位">
-                {meta?.seeSalary && band ? (
-                  (() => {
-                    const [lo, hi] = band.salaryBand;
-                    const pct = Math.min(100, Math.max(4, Math.round(((emp.salary - lo) / (hi - lo)) * 100)));
-                    return (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, width: 200 }}>
-                        <Progress percent={pct} size="small" showInfo={false} strokeColor="var(--clay)" style={{ marginBottom: 0, width: 140 }} />
-                        <span className="num" style={{ fontSize: 12, color: 'var(--ink-3)' }}>P{Math.min(9, Math.max(1, Math.round(pct / 12.5)))}</span>
-                      </span>
-                    );
-                  })()
-                ) : (
-                  <span style={{ color: 'var(--ink-4)' }}>
-                    <LockOutlined style={{ marginRight: 4 }} />
-                    需薪酬可见权限
-                  </span>
-                )}
-              </Descriptions.Item>
+              <Descriptions.Item label="绩效等级">{emp.perf_grade ?? '—'}</Descriptions.Item>
+              <Descriptions.Item label="直属上级">{emp.manager_name ?? '—'}</Descriptions.Item>
+              {emp.certificates.length > 0 && (
+                <Descriptions.Item label="已获认证" span={2}>
+                  <Space size={4} wrap>
+                    {emp.certificates.map((c, i) => (
+                      <Tag key={i} style={{ borderRadius: 6, fontSize: 12, borderColor: 'var(--line)', background: 'var(--surface-sunken)', color: 'var(--ink-2)' }}>
+                        {c}
+                      </Tag>
+                    ))}
+                  </Space>
+                </Descriptions.Item>
+              )}
             </Descriptions>
           </Card>
 
-          {/* 认证动态（剧本化） */}
+          {/* 认证与发展动态 */}
           <Card
             variant="borderless"
             style={{ background: 'var(--surface)' }}
             title="认证与发展动态"
             size="small"
           >
-            {emp.tags.includes('P4 认证中') ? (
+            {isSelf && inFlightCert ? (
               <Space direction="vertical" size={8} style={{ width: '100%' }}>
                 <Tag style={{ borderRadius: 6, background: 'var(--ochre-soft)', color: 'var(--ochre)', borderColor: 'transparent', width: 'fit-content' }}>
-                  SW-P4 认证进行中 · 当前环节：履职举证
+                  {inFlightCert.target_sequence} · 目标 {inFlightCert.target_grade}
                 </Tag>
-                <Progress percent={45} size="small" strokeColor="var(--ochre)" />
+                <Progress percent={APPLICATION_STATUS_META[inFlightCert.status].step * 20} size="small" strokeColor="var(--ochre)" />
                 <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-                  已完成：基本条件校验、知识测验（86 分）；待完成：履职举证、评审答辩。
+                  状态：{APPLICATION_STATUS_META[inFlightCert.status].label}
+                  {inFlightCert.submitted_at ? ` · 提交于 ${inFlightCert.submitted_at.slice(0, 10)}` : ' · 草稿未提交'}
                 </span>
+                <Link to={`/app/cert-apply?app=${inFlightCert.id}`}>
+                  <Button size="small" style={{ marginTop: 4 }}>
+                    {inFlightCert.status === 'draft' ? '继续填写' : '查看进度'}
+                  </Button>
+                </Link>
               </Space>
-            ) : emp.tags.includes('IDP 执行中') || emp.tags.includes('重点培养') ? (
-              <Space direction="vertical" size={8}>
-                <Tag style={{ borderRadius: 6, background: 'var(--sage-soft)', color: 'var(--sage)', borderColor: 'transparent' }}>
-                  IDP 个人发展计划执行中
-                </Tag>
-                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-                  当前季度 2 项发展行动进行中，详见「IDP 个人发展计划」（批次 5 交付）。
-                </span>
-              </Space>
+            ) : isSelf && apps && apps.length === 0 ? (
+              <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                暂无认证记录，可前往「发起认证」开始你的晋升认证。
+                <Link to="/app/cert-apply"><Button size="small" type="link">发起认证</Button></Link>
+              </span>
+            ) : !isSelf ? (
+              <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                认证动态仅员工本人可见。HR 可在认证申请模块查看该员工的审批进度。
+              </span>
             ) : (
               <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
-                暂无进行中的认证或发展计划。认证主链路将于批次 3 交付。
+                暂无进行中的认证或发展计划。
               </span>
             )}
           </Card>
@@ -261,59 +326,60 @@ export function EmployeeDetail() {
             extra={
               meta?.seeFullProfile ? undefined : (
                 <Tag style={{ borderRadius: 6, fontSize: 11, borderColor: 'transparent', background: 'var(--surface-sunken)', color: 'var(--ink-3)' }}>
-                  <LockOutlined /> 摘要视图
+                  摘要视图
                 </Tag>
               )
             }
           >
-            <div
-              style={{
-                padding: '14px 16px',
-                background: 'var(--surface-sunken)',
-                borderRadius: 12,
-                border: '1px solid var(--line)',
-                fontSize: 13,
-                lineHeight: 1.9,
-                color: 'var(--ink-2)',
-              }}
-            >
-              {meta?.seeFullProfile ? (
-                <>
-                  <span className="ai-badge" style={{ marginRight: 8 }}>AI 画像</span>
-                  {emp.name}近两年绩效{emp.perf === 'S' || emp.perf === 'A' ? '持续优异' : '平稳'}，
-                  潜力评级{POTENTIAL_LABEL[emp.potential]}；九宫格位于 {emp.grid} 区。
-                  {emp.risk === 'HIGH'
-                    ? '离职风险较高，建议管理者尽快安排保留面谈。'
-                    : emp.risk === 'MID'
-                      ? '存在一定流动性信号，建议纳入常规关注。'
-                      : '稳定性良好。'}
-                </>
-              ) : (
-                <span style={{ color: 'var(--ink-3)' }}>
-                  完整画像（绩效趋势、能力结构、风险信号）需要「完整画像」可见权限。
-                  {isSelf ? ' 你可以在「我的画像」（批次 3）中查看自己的完整七维画像。' : ''}
-                </span>
-              )}
-            </div>
-            <div style={{ marginTop: 12 }}>
-              {['绩效趋势', '能力结构', '知识地图', '风险信号'].map((d) => (
-                <Tag key={d} style={{ borderRadius: 6, fontSize: 12, borderColor: 'var(--line)', background: 'var(--surface-sunken)', color: 'var(--ink-3)' }}>
-                  {d} · 批次 3
-                </Tag>
-              ))}
-            </div>
+            {profile && profileDims && profile.overall !== null ? (
+              <div
+                style={{
+                  padding: '14px 16px',
+                  background: 'var(--surface-sunken)',
+                  borderRadius: 12,
+                  border: '1px solid var(--line)',
+                  fontSize: 13,
+                  lineHeight: 1.9,
+                  color: 'var(--ink-2)',
+                }}
+              >
+                <span className="ai-badge" style={{ marginRight: 8 }}>AI 画像</span>
+                {emp.name} 综合评分 {profile.overall}，画像版本 v{profile.version_seq}（{profile.generated_at?.slice(0, 10)}）。
+                {profileDims.get('perf')?.score !== undefined && ` 绩效维度 ${profileDims.get('perf')?.score ?? '—'} 分。`}
+                {profileDims.get('duty')?.score !== undefined && ` 职责履行 ${profileDims.get('duty')?.score ?? '—'} 分。`}
+              </div>
+            ) : (
+              <Empty
+                description={
+                  meta?.seeFullProfile || isSelf
+                    ? '暂无画像数据，画像由 HR 按周期生成'
+                    : '完整画像需要「完整画像」可见权限'
+                }
+                style={{ padding: 20 }}
+              />
+            )}
+            {isSelf && (
+              <Link to="/app/my-profile">
+                <Button size="small" type="link" style={{ marginTop: 8 }}>查看我的完整画像 →</Button>
+              </Link>
+            )}
           </Card>
 
-          <Alert
-            style={{ marginTop: 16, background: 'var(--surface)', border: '1px solid var(--line)' }}
-            type="info"
-            showIcon
-            message={
-              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-                本页所有数据为虚拟剧本数据，用于验证角色掩码与数据范围。
-              </span>
-            }
-          />
+          {band && (
+            <Card variant="borderless" style={{ background: 'var(--surface)', marginTop: 16 }} title="职级带宽" size="small">
+              <Descriptions column={1} size="small" labelStyle={{ color: 'var(--ink-3)', width: 100 }}>
+                <Descriptions.Item label="职级">{emp.grade} · {band.title}</Descriptions.Item>
+                <Descriptions.Item label="带宽">{band.band_range}</Descriptions.Item>
+                <Descriptions.Item label="薪资区间">
+                  ¥ {band.salary_band[0].toLocaleString()} ~ {band.salary_band[1].toLocaleString()}
+                </Descriptions.Item>
+                <Descriptions.Item label="晋升条件">{band.promote_rule}</Descriptions.Item>
+                {band.review_years && (
+                  <Descriptions.Item label="复评周期">每 {band.review_years} 年复评</Descriptions.Item>
+                )}
+              </Descriptions>
+            </Card>
+          )}
         </Col>
       </Row>
     </div>

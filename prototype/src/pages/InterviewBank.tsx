@@ -1,28 +1,54 @@
-import { useMemo, useState } from 'react';
-import { Button, Card, Col, Row, Segmented, Table, Tag, message } from 'antd';
-import { DIM_LABEL, InterviewQuestion, QDimension, interviewQuestions } from '@/mock/recruit';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Card, Col, Empty, Row, Segmented, Table, Tag, message } from 'antd';
 import { RobotOutlined } from '@ant-design/icons';
+import { interviewApi, InterviewQuestionOut } from '@/api/recruit';
 
+const DIM_LABEL: Record<number, string> = { 1: '履职', 2: '知识', 3: '能力', 4: '业绩' };
 const SOURCE_META = {
   standard: { label: '履职表转制', bg: 'var(--teal-soft)', color: 'var(--teal)' },
   ai: { label: 'AI 出题', bg: 'var(--clay-soft)', color: 'var(--clay)' },
   manual: { label: '人工', bg: 'var(--surface-sunken)', color: 'var(--ink-3)' },
-};
+} as const;
 const STATUS_META = {
   approved: { label: '已生效', bg: 'var(--sage-soft)', color: 'var(--sage)' },
   pending_review: { label: '待审核', bg: 'var(--ochre-soft)', color: 'var(--ochre)' },
   rejected: { label: '已驳回', bg: 'var(--danger-soft)', color: 'var(--danger)' },
-};
+} as const;
 
 export function InterviewBank() {
-  const [rows, setRows] = useState<InterviewQuestion[]>(interviewQuestions);
+  const [rows, setRows] = useState<InterviewQuestionOut[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dim, setDim] = useState<'all' | '1' | '2' | '3' | '4'>('all');
+
+  useEffect(() => {
+    interviewApi.list().then((data) => {
+      setRows(data);
+      setLoading(false);
+    }).catch(() => {
+      message.error('面试题库加载失败');
+      setLoading(false);
+    });
+  }, []);
 
   const list = useMemo(() => rows.filter((r) => dim === 'all' || r.dimension === Number(dim)), [rows, dim]);
 
+  const handleGenerate = () => {
+    message.loading({ content: 'AI 生成中...', key: 'gen', duration: 2 });
+    interviewApi.generate({ position: '高级软件工程师', grade: 'P4' }).then((newQs) => {
+      setRows((prev) => [...newQs, ...prev]);
+      message.success({ content: `AI 生成 ${newQs.length} 道题，已进入待审核`, key: 'gen' });
+    }).catch(() => {
+      message.error({ content: 'AI 生成失败', key: 'gen' });
+    });
+  };
+
   const review = (id: string, pass: boolean) => {
-    setRows((l) => l.map((r) => (r.id === id ? { ...r, status: pass ? 'approved' : 'rejected' } : r)));
-    message.success(pass ? '题目已审核生效，进入面试题库' : '题目已驳回，退回 AI 重新生成');
+    interviewApi.review(id, pass).then((updated) => {
+      setRows((prev) => prev.map((r) => (r.id === id ? updated : r)));
+      message.success(pass ? '题目已审核生效，进入面试题库' : '题目已驳回，退回 AI 重新生成');
+    }).catch(() => {
+      message.error('审核操作失败');
+    });
   };
 
   const counts = {
@@ -39,12 +65,7 @@ export function InterviewBank() {
           <h1 className="page-title font-serif">面试题库</h1>
           <div className="page-subtitle">履职表即题库 · 任职资格四部分均可转题 · AI 按职级出题需人工审核</div>
         </div>
-        <Button
-          type="primary"
-          icon={<RobotOutlined />}
-          style={{ background: 'var(--charcoal)' }}
-          onClick={() => message.loading('AI 依据 SW-P4 知识项生成 6 道题，已进入待审核（模拟）')}
-        >
+        <Button type="primary" icon={<RobotOutlined />} style={{ background: 'var(--charcoal)' }} onClick={handleGenerate}>
           AI 按职级出题
         </Button>
       </div>
@@ -75,7 +96,7 @@ export function InterviewBank() {
               {counts.dims.map((v, i) => (
                 <div key={i} style={{ flex: 1, textAlign: 'center', background: 'var(--surface-sunken)', borderRadius: 6, padding: '6px 0' }}>
                   <div className="num" style={{ fontWeight: 700 }}>{v}</div>
-                  <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{DIM_LABEL[(i + 1) as QDimension]}</div>
+                  <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{DIM_LABEL[i + 1]}</div>
                 </div>
               ))}
             </div>
@@ -97,72 +118,79 @@ export function InterviewBank() {
             ]}
           />
         </div>
-        <Table
-          rowKey="id"
-          dataSource={list}
-          pagination={false}
-          size="middle"
-          columns={[
-            {
-              title: '维度',
-              width: 70,
-              render: (_: unknown, r) => (
-                <Tag style={{ borderRadius: 6, background: 'var(--charcoal)', color: '#fff', borderColor: 'transparent', fontWeight: 600 }}>
-                  {DIM_LABEL[r.dimension]}
-                </Tag>
-              ),
-            },
-            {
-              title: '题目',
-              render: (_: unknown, r) => (
-                <div>
-                  <div style={{ fontWeight: 600 }}>{r.question}</div>
-                  {r.answerPoint && (
-                    <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>评分要点：{r.answerPoint}</div>
-                  )}
-                </div>
-              ),
-            },
-            {
-              title: '适用',
-              width: 150,
-              render: (_: unknown, r) => (
-                <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{r.position} · {r.grade}</span>
-              ),
-            },
-            {
-              title: '来源',
-              width: 110,
-              render: (_: unknown, r) => (
-                <Tag style={{ borderRadius: 6, background: SOURCE_META[r.source].bg, color: SOURCE_META[r.source].color, borderColor: 'transparent' }}>
-                  {SOURCE_META[r.source].label}
-                </Tag>
-              ),
-            },
-            {
-              title: '状态',
-              width: 90,
-              render: (_: unknown, r) => (
-                <Tag style={{ borderRadius: 6, background: STATUS_META[r.status].bg, color: STATUS_META[r.status].color, borderColor: 'transparent', fontWeight: 600 }}>
-                  {STATUS_META[r.status].label}
-                </Tag>
-              ),
-            },
-            {
-              title: '操作',
-              width: 130,
-              render: (_: unknown, r) =>
-                r.status === 'pending_review' ? (
-                  <div style={{ display: 'flex' }}>
-                    <Button type="link" size="small" style={{ color: 'var(--sage)', padding: '0 4px' }} onClick={() => review(r.id, true)}>通过</Button>
-                    <Button type="link" size="small" danger style={{ padding: '0 4px' }} onClick={() => review(r.id, false)}>驳回</Button>
-                  </div>
-                ) : (
-                  <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>已归档</span>
+        {list.length === 0 && !loading ? (
+          <Empty description="暂无面试题，可点击右上角 AI 出题" />
+        ) : (
+          <Table
+            rowKey="id"
+            dataSource={list}
+            pagination={false}
+            size="middle"
+            loading={loading}
+            columns={[
+              {
+                title: '维度',
+                width: 70,
+                render: (_: unknown, r: InterviewQuestionOut) => (
+                  <Tag style={{ borderRadius: 6, background: 'var(--charcoal)', color: '#fff', borderColor: 'transparent', fontWeight: 600 }}>
+                    {DIM_LABEL[r.dimension]}
+                  </Tag>
                 ),
-            },
-          ]}
-        />
+              },
+              {
+                title: '题目',
+                render: (_: unknown, r: InterviewQuestionOut) => (
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{r.question}</div>
+                    {r.answer_point && (
+                      <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>评分要点：{r.answer_point}</div>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                title: '适用',
+                width: 150,
+                render: (_: unknown, r: InterviewQuestionOut) => (
+                  <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{r.position} · {r.grade}</span>
+                ),
+              },
+              {
+                title: '来源',
+                width: 110,
+                render: (_: unknown, r: InterviewQuestionOut) => {
+                  const meta = SOURCE_META[r.source as keyof typeof SOURCE_META] ?? SOURCE_META.manual;
+                  return (
+                    <Tag style={{ borderRadius: 6, background: meta.bg, color: meta.color, borderColor: 'transparent' }}>{meta.label}</Tag>
+                  );
+                },
+              },
+              {
+                title: '状态',
+                width: 90,
+                render: (_: unknown, r: InterviewQuestionOut) => {
+                  const meta = STATUS_META[r.status as keyof typeof STATUS_META] ?? STATUS_META.rejected;
+                  return (
+                    <Tag style={{ borderRadius: 6, background: meta.bg, color: meta.color, borderColor: 'transparent', fontWeight: 600 }}>{meta.label}</Tag>
+                  );
+                },
+              },
+              {
+                title: '操作',
+                width: 130,
+                render: (_: unknown, r: InterviewQuestionOut) =>
+                  r.status === 'pending_review' ? (
+                    <div style={{ display: 'flex' }}>
+                      <Button type="link" size="small" style={{ color: 'var(--sage)', padding: '0 4px' }} onClick={() => review(r.id, true)}>通过</Button>
+                      <Button type="link" size="small" danger style={{ padding: '0 4px' }} onClick={() => review(r.id, false)}>驳回</Button>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>已归档</span>
+                  ),
+              },
+            ]}
+          />
+        )}
       </Card>
 
       <Card variant="borderless" style={{ background: 'var(--surface-sunken)', marginTop: 16 }} size="small">

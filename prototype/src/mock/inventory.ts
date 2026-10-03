@@ -9,12 +9,13 @@ import { latestProfile } from '@/mock/profiles';
 import { deptName, subtreeDeptIds, positions } from '@/mock/org';
 
 // ============ 盘点批次 ============
-export type InvStatus = 'DRAFT' | 'RUNNING' | 'PUBLISHED';
+export type InvStatus = 'DRAFT' | 'CALIBRATING' | 'CONFIRMING' | 'PUBLISHED';
 export type InvPurpose = 'ANNUAL' | 'SUCCESSION' | 'SALARY' | 'DEVELOPMENT';
 
 export const INV_STATUS_LABEL: Record<InvStatus, string> = {
   DRAFT: '草稿',
-  RUNNING: '进行中',
+  CALIBRATING: '校准中',
+  CONFIRMING: '确认中',
   PUBLISHED: '已发布',
 };
 
@@ -60,7 +61,7 @@ export const batches: InventoryBatch[] = [
     id: 'inv_2026_h1',
     name: '2026 半年度盘点（研发中心）',
     purpose: 'SUCCESSION',
-    status: 'RUNNING',
+    status: 'CALIBRATING',
     startedAt: '2026-09-10',
     deadline: '2026-10-30',
     dimensionConfig: { perf: 0.35, ability: 0.35, potential: 0.3 },

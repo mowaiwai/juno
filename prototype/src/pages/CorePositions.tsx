@@ -1,15 +1,32 @@
-import { useMemo } from 'react';
-import { Button, Card, Col, Progress, Row, Space, Table, Tag } from 'antd';
+import { useEffect, useState } from 'react';
+import { Card, Col, Empty, Progress, Row, Space, Table, Tag, message } from 'antd';
 import { Link } from 'react-router-dom';
-import { corePositions } from '@/mock/succession';
+import { successionApi, type CorePositionView } from '@/api/succession';
+import { employeesApi, type EmployeeDirectoryItem } from '@/api/employees';
 
 const RISK_COLOR = { HIGH: 'var(--danger)', MID: 'var(--ochre)', LOW: 'var(--sage)' };
 const RISK_LABEL = { HIGH: '高风险', MID: '中风险', LOW: '低风险' };
 
 export function CorePositions() {
-  const list = useMemo(() => corePositions(), []);
+  const [list, setList] = useState<CorePositionView[]>([]);
+  const [emps, setEmps] = useState<Map<string, EmployeeDirectoryItem>>(new Map());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([successionApi.listPositions(), employeesApi.list()])
+      .then(([positions, dir]) => {
+        setList(positions);
+        setEmps(new Map(dir.map((e) => [e.id, e])));
+      })
+      .catch(() => message.error('加载核心岗位数据失败'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const nameOf = (id: string | null) => (id ? emps.get(id)?.name ?? '—' : '—');
   const highRisk = list.filter((p) => p.risk === 'HIGH').length;
-  const coverage = list.length ? Math.round((list.reduce((s, p) => s + p.coverage, 0) / list.length) * 100) : 0;
+  const coverage = list.length
+    ? Math.round(list.reduce((s, p) => s + p.coverage, 0) / list.length)
+    : 0;
 
   return (
     <div className="page" style={{ maxWidth: 1400 }}>
@@ -42,7 +59,7 @@ export function CorePositions() {
         <Col span={6}>
           <Card variant="borderless" style={{ background: 'var(--surface)' }}>
             <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>候选总人数</div>
-            <div className="num" style={{ fontSize: 26, fontWeight: 700, color: 'var(--teal)' }}>{list.reduce((s, p) => s + p.candidateCount, 0)}</div>
+            <div className="num" style={{ fontSize: 26, fontWeight: 700, color: 'var(--teal)' }}>{list.reduce((s, p) => s + p.candidate_count, 0)}</div>
           </Card>
         </Col>
       </Row>
@@ -51,22 +68,24 @@ export function CorePositions() {
         <Table
           rowKey="id"
           dataSource={list}
+          loading={loading}
           pagination={false}
+          locale={{ emptyText: <Empty description="暂无核心岗位，可通过继任规划模块创建" /> }}
           columns={[
-            { title: '岗位', render: (_: unknown, r) => (
+            { title: '岗位', render: (_: unknown, r: CorePositionView) => (
               <Space direction="vertical" size={2}>
                 <span style={{ fontWeight: 600 }}>{r.name}</span>
-                <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>{r.deptName} · {r.grade}</span>
+                <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>{r.dept_id ?? '—'} · {r.grade}</span>
               </Space>
             )},
             { title: '编制', dataIndex: 'headcount' },
-            { title: '在岗人', dataIndex: 'incumbentName', render: (v) => v ?? <Tag color="red" style={{ borderRadius: 6 }}>空缺</Tag> },
+            { title: '在岗人', dataIndex: 'incumbent_employee_id', render: (v: string | null) => v ? nameOf(v) : <Tag color="red" style={{ borderRadius: 6 }}>空缺</Tag> },
             {
               title: '继任覆盖',
-              render: (_: unknown, r) => (
+              render: (_: unknown, r: CorePositionView) => (
                 <Space>
-                  <Progress percent={Math.round(r.coverage * 100)} size="small" strokeColor="var(--sage)" style={{ width: 100 }} showInfo={false} />
-                  <span className="num" style={{ fontSize: 12 }}>{r.candidateCount} 人</span>
+                  <Progress percent={r.coverage} size="small" strokeColor="var(--sage)" style={{ width: 100 }} showInfo={false} />
+                  <span className="num" style={{ fontSize: 12 }}>{r.candidate_count} 人</span>
                 </Space>
               ),
             },
@@ -77,12 +96,12 @@ export function CorePositions() {
                 <Tag style={{ borderRadius: 6, background: RISK_COLOR[v] + '22', color: RISK_COLOR[v], borderColor: 'transparent' }}>{RISK_LABEL[v]}</Tag>
               ),
             },
-            { title: '风险原因', dataIndex: 'riskReason', ellipsis: true },
+            { title: '风险原因', dataIndex: 'risk_reason', ellipsis: true },
             {
               title: '操作',
-              render: (_: unknown, r) => (
+              render: (_: unknown, r: CorePositionView) => (
                 <Link to={`/app/succession-matrix?id=${r.id}`}>
-                  <Button type="link" size="small">查看继任矩阵</Button>
+                  <span style={{ color: 'var(--clay)', cursor: 'pointer', fontSize: 13 }}>查看继任矩阵</span>
                 </Link>
               ),
             },

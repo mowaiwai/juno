@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   Card,
   Col,
+  Empty,
   Row,
   Select,
+  Spin,
   Steps,
   Tag,
   Timeline,
@@ -14,6 +16,10 @@ import {
 } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import { standards } from '@/mock/standards';
+import { USE_MOCK } from '@/api/config';
+import { ApiError } from '@/api/client';
+import { standardsApi, type StandardSetDTO } from '@/api/standards';
+import { useAuth } from '@/store/auth';
 
 interface VersionRow {
   version: string;
@@ -62,7 +68,7 @@ const VERSIONS: Record<string, VersionRow[]> = {
 
 const FLOW_STEPS = ['起草 / 修订', 'HR 初审', '委员会评审', '发布生效'];
 
-export function StandardVersions() {
+function MockStandardVersions() {
   const [stdId, setStdId] = useState('std_sw');
   const [flowStep, setFlowStep] = useState(1);
 
@@ -229,4 +235,221 @@ export function StandardVersions() {
       </Row>
     </div>
   );
+}
+
+// ---------- 真实后端分支 ----------
+
+const REAL_STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  published: '已发布',
+  archived: '已归档',
+};
+
+const REAL_STATUS_COLOR: Record<string, string> = {
+  draft: 'orange',
+  published: 'green',
+  archived: 'gray',
+};
+
+function RealStandardVersions() {
+  const role = useAuth((s) => s.activeRole);
+  const [sets, setSets] = useState<StandardSetDTO[] | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [groupKey, setGroupKey] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+
+  const reload = () => {
+    setErrorMsg(null);
+    return standardsApi
+      .list()
+      .then((rows) => setSets(rows))
+      .catch((e: unknown) => {
+        setSets([]);
+        setErrorMsg(e instanceof ApiError ? e.message : '标准集加载失败');
+        message.error('版本数据加载失败');
+      });
+  };
+
+  useEffect(() => {
+    reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 按 序列+职级 分组，组内按版本倒序
+  const groups = useMemo(() => {
+    const map = new Map<string, StandardSetDTO[]>();
+    for (const s of sets ?? []) {
+      const key = `${s.sequence} · ${s.target_grade}`;
+      const arr = map.get(key) ?? [];
+      arr.push(s);
+      map.set(key, arr);
+    }
+    for (const arr of map.values()) arr.sort((a, b) => b.version - a.version);
+    return map;
+  }, [sets]);
+
+  const groupKeys = useMemo(() => [...groups.keys()], [groups]);
+  const activeKey = groupKey ?? groupKeys[0] ?? null;
+  const activeVersions = activeKey ? groups.get(activeKey) ?? [] : [];
+  const currentPublished = activeVersions.find((v) => v.status === 'published');
+
+  const onPublish = async (id: string) => {
+    setPublishingId(id);
+    try {
+      const d = await standardsApi.publish(id);
+      message.success(`已发布 v${d.version}，同键旧发布版自动归档`);
+      await reload();
+    } catch (e) {
+      message.error(e instanceof ApiError ? e.message : '发布失败');
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title font-serif">版本与发布</h1>
+          <div className="page-subtitle">
+            草稿 → 发布 → 归档 · 同一序列职级至多一个已发布版本
+          </div>
+        </div>
+        {groupKeys.length > 0 && (
+          <Select
+            value={activeKey}
+            onChange={(v) => setGroupKey(v)}
+            style={{ minWidth: 220 }}
+            options={groupKeys.map((k) => ({ value: k, label: k }))}
+          />
+        )}
+      </div>
+
+      {errorMsg && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="无法加载标准集"
+          description={errorMsg}
+        />
+      )}
+
+      {sets === null ? (
+        <div style={{ textAlign: 'center', padding: 80 }}>
+          <Spin />
+        </div>
+      ) : activeVersions.length === 0 ? (
+        <Card variant="borderless" style={{ background: 'var(--surface)' }}>
+          <Empty description="暂无标准集版本记录" />
+        </Card>
+      ) : (
+        <Row gutter={16}>
+          <Col span={14}>
+            <Card
+              variant="borderless"
+              style={{ background: 'var(--surface)' }}
+              title="当前生效版本"
+            >
+              {currentPublished ? (
+                <div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span className="num" style={{ fontSize: 22, fontWeight: 700 }}>
+                      v{currentPublished.version}
+                    </span>
+                    <Tag
+                      style={{
+                        borderRadius: 6,
+                        background: 'var(--sage-soft)',
+                        color: 'var(--sage)',
+                        borderColor: 'transparent',
+                      }}
+                    >
+                      已发布
+                    </Tag>
+                  </div>
+                  <div style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 8 }}>
+                    发布于 {currentPublished.published_at?.slice(0, 10)} ·{' '}
+                    {currentPublished.items.length} 个标准项 · 权重合计{' '}
+                    {currentPublished.items.reduce((s, i) => s + Number(i.weight), 0)}%
+                  </div>
+                  <ul style={{ margin: '16px 0 0', paddingLeft: 18 }}>
+                    {currentPublished.items.map((i) => (
+                      <li
+                        key={i.id}
+                        style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 6 }}
+                      >
+                        <span className="num" style={{ fontWeight: 600 }}>{i.code}</span>
+                        {' '}{i.name}（{i.weight}%）— {i.requirement}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <Empty description="该序列职级暂无已发布版本" />
+              )}
+            </Card>
+          </Col>
+
+          <Col span={10}>
+            <Card
+              variant="borderless"
+              style={{ background: 'var(--surface)' }}
+              title="版本时间线"
+            >
+              <Timeline
+                items={activeVersions.map((v) => ({
+                  color: REAL_STATUS_COLOR[v.status] ?? 'gray',
+                  children: (
+                    <div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span className="num" style={{ fontWeight: 700 }}>
+                          v{v.version}
+                        </span>
+                        <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                          {v.published_at ? v.published_at.slice(0, 10) : '未发布'}
+                        </span>
+                        <Tag
+                          style={{
+                            borderRadius: 6,
+                            fontSize: 11,
+                            borderColor: 'var(--line)',
+                            background: 'var(--surface-sunken)',
+                            color: 'var(--ink-2)',
+                          }}
+                        >
+                          {REAL_STATUS_LABEL[v.status] ?? v.status}
+                        </Tag>
+                        {role === 'hr' && v.status === 'draft' && (
+                          <Button
+                            size="small"
+                            type="link"
+                            loading={publishingId === v.id}
+                            onClick={() => onPublish(v.id)}
+                          >
+                            发布
+                          </Button>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>
+                        {v.items.length} 个标准项
+                      </div>
+                    </div>
+                  ),
+                }))}
+              />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                <CheckCircleOutlined style={{ color: 'var(--sage)', marginRight: 6 }} />
+                已发布版本全员可见；归档版本仅供追溯，不可作为认证依据。
+              </Typography.Text>
+            </Card>
+          </Col>
+        </Row>
+      )}
+    </div>
+  );
+}
+
+export function StandardVersions() {
+  return USE_MOCK ? <MockStandardVersions /> : <RealStandardVersions />;
 }

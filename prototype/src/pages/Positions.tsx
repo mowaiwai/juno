@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
@@ -11,54 +11,79 @@ import {
   Statistic,
   Table,
   Tag,
+  Spin,
   message,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { departments, positions } from '@/mock/org';
-import { employees as allEmployees } from '@/mock/people';
-import { FAMILY_LABEL, bandOf } from '@/mock/channels';
-import { deptName } from '@/mock/org';
-import type { Position } from '@/types';
+import { orgApi, type PositionItem, type DepartmentItem, type FamilyLabelMap, type ChannelFamily } from '@/api/org';
 
 export function Positions() {
+  const [positions, setPositions] = useState<PositionItem[]>([]);
+  const [depts, setDepts] = useState<DepartmentItem[]>([]);
+  const [familyLabel, setFamilyLabel] = useState<FamilyLabelMap>({});
+  const [channels, setChannels] = useState<ChannelFamily[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deptFilter, setDeptFilter] = useState<string | undefined>();
   const [familyFilter, setFamilyFilter] = useState<string | undefined>();
   const [keyword, setKeyword] = useState('');
 
+  useEffect(() => {
+    Promise.all([
+      orgApi.positions(),
+      orgApi.departments(),
+      orgApi.familyLabel(),
+      orgApi.channels(),
+    ])
+      .then(([p, d, fl, c]) => {
+        setPositions(p);
+        setDepts(d);
+        setFamilyLabel(fl);
+        setChannels(c);
+      })
+      .catch(() => message.error('加载岗位数据失败'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const deptName = useMemo(() => {
+    const map = new Map(depts.map((d) => [d.id, d.name]));
+    return (id: string) => map.get(id) ?? id;
+  }, [depts]);
+
+  const bandOf = useMemo(() => {
+    return (family: string, grade: string) => {
+      const ch = channels.find((c) => c.family === family);
+      return ch?.grades.find((g) => g.grade === grade);
+    };
+  }, [channels]);
+
   const rows = useMemo(() => {
     return positions
-      .filter((p) => !deptFilter || p.deptId === deptFilter)
+      .filter((p) => !deptFilter || p.dept_id === deptFilter)
       .filter((p) => !familyFilter || p.family === familyFilter)
-      .filter((p) => !keyword || p.name.includes(keyword))
-      .map((p) => {
-        const on = allEmployees.filter(
-          (e) => e.deptId === p.deptId && e.position === p.name,
-        ).length;
-        return { ...p, onDuty: on };
-      });
-  }, [deptFilter, familyFilter, keyword]);
+      .filter((p) => !keyword || p.name.includes(keyword));
+  }, [positions, deptFilter, familyFilter, keyword]);
 
   const stats = useMemo(() => {
     const headcount = rows.reduce((s, r) => s + r.headcount, 0);
-    const onDuty = rows.reduce((s, r) => s + r.onDuty, 0);
+    const onDuty = rows.reduce((s, r) => s + r.on_duty, 0);
     return {
       total: rows.length,
-      core: rows.filter((r) => r.isCore).length,
+      core: rows.filter((r) => r.is_core).length,
       headcount,
       onDuty,
       rate: headcount ? Math.round((onDuty / headcount) * 100) : 0,
     };
   }, [rows]);
 
-  const columns: ColumnsType<(typeof rows)[number]> = [
+  const columns: ColumnsType<PositionItem> = [
     {
       title: '岗位',
       dataIndex: 'name',
       render: (v: string, row) => (
         <Space size={6}>
           <span style={{ fontWeight: 600 }}>{v}</span>
-          {row.isCore && (
+          {row.is_core && (
             <Tag style={{ borderRadius: 6, background: 'var(--clay-soft)', color: 'var(--clay-hover)', borderColor: 'transparent' }}>
               核心岗
             </Tag>
@@ -68,17 +93,17 @@ export function Positions() {
     },
     {
       title: '所属部门',
-      dataIndex: 'deptId',
+      dataIndex: 'dept_id',
       render: (v: string) => deptName(v),
     },
     {
       title: '职族 / 序列',
       dataIndex: 'family',
       width: 150,
-      render: (v: Position['family'], row) => (
+      render: (v: string, row) => (
         <span>
           <Tag style={{ borderRadius: 6, background: 'var(--surface-sunken)', borderColor: 'var(--line)', color: 'var(--ink-2)' }}>
-            {v} · {FAMILY_LABEL[v]}
+            {v} · {familyLabel[v] ?? v}
           </Tag>
           <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>{row.sequence}</span>
         </span>
@@ -99,7 +124,7 @@ export function Positions() {
         if (!band) return '—';
         return (
           <span className="num" style={{ fontSize: 12, color: 'var(--ink-2)' }}>
-            ¥ {band.salaryBand[0].toLocaleString()} ~ {band.salaryBand[1].toLocaleString()}
+            ¥ {band.salary_band[0].toLocaleString()} ~ {band.salary_band[1].toLocaleString()}
           </span>
         );
       },
@@ -109,11 +134,11 @@ export function Positions() {
       key: 'hc',
       width: 220,
       render: (_, row) => {
-        const pct = row.headcount ? Math.round((row.onDuty / row.headcount) * 100) : 0;
+        const pct = row.headcount ? Math.round((row.on_duty / row.headcount) * 100) : 0;
         return (
           <Space size={8} style={{ width: '100%' }}>
             <span className="num" style={{ width: 52, fontSize: 12 }}>
-              {row.onDuty}/{row.headcount}
+              {row.on_duty}/{row.headcount}
             </span>
             <Progress
               percent={pct}
@@ -122,9 +147,9 @@ export function Positions() {
               style={{ width: 90, marginBottom: 0 }}
               strokeColor={pct < 70 ? 'var(--ochre)' : 'var(--sage)'}
             />
-            {row.onDuty < row.headcount && (
+            {row.on_duty < row.headcount && (
               <Tag style={{ borderRadius: 6, fontSize: 11, background: 'var(--ochre-soft)', color: 'var(--ochre)', borderColor: 'transparent' }}>
-                缺编 {row.headcount - row.onDuty}
+                缺编 {row.headcount - row.on_duty}
               </Tag>
             )}
           </Space>
@@ -133,19 +158,21 @@ export function Positions() {
     },
   ];
 
+  if (loading) return <Spin style={{ display: 'block', padding: 80 }} />;
+
   return (
     <div className="page">
       <div className="page-header">
         <div>
           <h1 className="page-title font-serif">岗位管理</h1>
           <div className="page-subtitle">
-            岗位 = 职族 × 序列 × 职级 × 编制；核心岗位联动继任盘点（批次 6）
+            岗位 = 职族 × 序列 × 职级 × 编制；核心岗位联动继任盘点
           </div>
         </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={() => message.info('原型演示：新增岗位表单将在集成版提供')}
+          onClick={() => message.info('新增岗位表单将在后续版本提供')}
         >
           新增岗位
         </Button>
@@ -189,7 +216,7 @@ export function Positions() {
             style={{ minWidth: 180 }}
             value={deptFilter}
             onChange={setDeptFilter}
-            options={departments
+            options={depts
               .filter((d) => d.id !== '0')
               .map((d) => ({ value: d.id, label: d.name }))}
           />
@@ -199,9 +226,9 @@ export function Positions() {
             style={{ minWidth: 140 }}
             value={familyFilter}
             onChange={setFamilyFilter}
-            options={(Object.keys(FAMILY_LABEL) as Array<keyof typeof FAMILY_LABEL>).map((f) => ({
+            options={Object.entries(familyLabel).map(([f, label]) => ({
               value: f,
-              label: `${f} · ${FAMILY_LABEL[f]}`,
+              label: `${f} · ${label}`,
             }))}
           />
           <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>

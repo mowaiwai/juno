@@ -1,6 +1,7 @@
-import { Card, Col, Progress, Row, Space, Table, Tag } from 'antd';
+import { useEffect, useState } from 'react';
+import { Card, Col, Progress, Row, Space, Spin, Table, Tag, message } from 'antd';
 import { WarningOutlined } from '@ant-design/icons';
-import { gapWarnings } from '@/mock/inventory';
+import { orgApi, type GapWarningOut } from '@/api/orgDiagnosis';
 
 const LEVEL_COLOR: Record<string, string> = {
   HIGH: 'var(--danger)',
@@ -15,8 +16,19 @@ const LEVEL_LABEL: Record<string, string> = {
 };
 
 export function GapWarning() {
-  const high = gapWarnings.filter((g) => g.level === 'HIGH').length;
-  const mid = gapWarnings.filter((g) => g.level === 'MID').length;
+  const [rows, setRows] = useState<GapWarningOut[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    orgApi.gapWarnings()
+      .then(setRows)
+      .catch(() => message.error('加载断层预警数据失败'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const high = rows.filter((g) => g.level === 'HIGH').length;
+  const mid = rows.filter((g) => g.level === 'MID').length;
 
   return (
     <div className="page" style={{ maxWidth: 1400 }}>
@@ -55,42 +67,48 @@ export function GapWarning() {
       </Row>
 
       <Card variant="borderless" style={{ background: 'var(--surface)' }} title="断层岗位清单" size="small">
-        <Table
-          rowKey="positionId"
-          dataSource={gapWarnings}
-          pagination={false}
-          expandable={{
-            expandedRowRender: (r) => (
-              <div style={{ padding: '8px 16px', background: 'var(--surface-sunken)', borderRadius: 8 }}>
-                <div style={{ marginBottom: 8 }}><b>风险原因：</b>{r.reason}</div>
-                <div><b>补位建议：</b>{r.suggestion}</div>
-              </div>
-            ),
-          }}
-          columns={[
-            { title: '岗位', render: (_: unknown, r) => (
-              <Space direction="vertical" size={2}>
-                <span style={{ fontWeight: 600 }}>{r.positionName}</span>
-                <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>{r.deptName}</span>
-              </Space>
-            )},
-            { title: '在岗人', render: (_: unknown, r) => r.incumbentName },
-            {
-              title: '风险等级',
-              dataIndex: 'level',
-              render: (l: string) => (
-                <Tag style={{ borderRadius: 6, background: LEVEL_COLOR[l] + '22', color: LEVEL_COLOR[l], borderColor: 'transparent' }}>
-                  {LEVEL_LABEL[l]}
-                </Tag>
+        <Spin spinning={loading}>
+          <Table
+            rowKey="position_id"
+            dataSource={rows}
+            pagination={false}
+            expandable={{
+              expandedRowRender: (r) => (
+                <div style={{ padding: '8px 16px', background: 'var(--surface-sunken)', borderRadius: 8 }}>
+                  <div style={{ marginBottom: 8 }}><b>风险原因：</b>{r.reason}</div>
+                  <div><b>补位建议：</b>{r.suggestion}</div>
+                </div>
               ),
-            },
-            { title: '风险原因', dataIndex: 'reason', ellipsis: true },
-            {
-              title: '补位建议',
-              render: () => <Tag color="blue" style={{ borderRadius: 6 }}>展开查看</Tag>,
-            },
-          ]}
-        />
+            }}
+            columns={[
+              { title: '岗位', render: (_: unknown, r) => (
+                <Space direction="vertical" size={2}>
+                  <span style={{ fontWeight: 600 }}>{r.position_name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>{r.dept_name}</span>
+                </Space>
+              )},
+              { title: '在岗人', render: (_: unknown, r) => r.incumbent_name },
+              {
+                title: '等级',
+                dataIndex: 'level',
+                render: (l: string) => {
+                  const color = LEVEL_COLOR[l] ?? 'var(--ink-3)';
+                  const label = LEVEL_LABEL[l] ?? l;
+                  return (
+                    <Tag style={{ borderRadius: 6, background: color + '22', color, borderColor: 'transparent' }}>
+                      {label}
+                    </Tag>
+                  );
+                },
+              },
+              { title: '风险原因', dataIndex: 'reason', ellipsis: true },
+              {
+                title: '补位建议',
+                render: () => <Tag color="blue" style={{ borderRadius: 6 }}>展开查看</Tag>,
+              },
+            ]}
+          />
+        </Spin>
       </Card>
     </div>
   );

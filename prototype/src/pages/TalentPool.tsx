@@ -1,18 +1,39 @@
-import { useMemo, useState } from 'react';
-import { Button, Card, Col, Row, Select, Space, Table, Tag, message } from 'antd';
-import { poolMembers, POOL_LEVEL_LABEL } from '@/mock/succession';
-import type { PoolLevel } from '@/mock/succession';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Card, Col, Empty, Row, Select, Space, Table, Tag, message } from 'antd';
+import { successionApi, type TalentPoolOut } from '@/api/succession';
+import { employeesApi, type EmployeeDirectoryItem } from '@/api/employees';
 
-const LEVEL_COLOR = { L1: 'var(--danger)', L2: 'var(--ochre)', L3: 'var(--teal)' };
-const STATUS_LABEL = { active: '在池', graduated: '已出池', exited: '已退出' };
+const LEVEL_COLOR: Record<string, string> = { L1: 'var(--danger)', L2: 'var(--ochre)', L3: 'var(--teal)' };
+const POOL_LEVEL_LABEL: Record<string, string> = { L1: '一级梯队（核心继任）', L2: '二级梯队（重点培养）', L3: '三级梯队（潜力储备）' };
+const STATUS_LABEL: Record<string, string> = { active: '在池', graduated: '已出池', exited: '已退出' };
 
 export function TalentPool() {
   const [level, setLevel] = useState<string>('all');
-  const list = useMemo(() => poolMembers.filter((m) => level === 'all' || m.level === level), [level]);
+  const [list, setList] = useState<TalentPoolOut[]>([]);
+  const [emps, setEmps] = useState<Map<string, EmployeeDirectoryItem>>(new Map());
+  const [loading, setLoading] = useState(true);
 
-  const l1 = poolMembers.filter((m) => m.level === 'L1').length;
-  const l2 = poolMembers.filter((m) => m.level === 'L2').length;
-  const l3 = poolMembers.filter((m) => m.level === 'L3').length;
+  useEffect(() => {
+    Promise.all([successionApi.listPools(), employeesApi.list()])
+      .then(([pools, dir]) => {
+        setList(pools);
+        setEmps(new Map(dir.map((e) => [e.id, e])));
+      })
+      .catch(() => message.error('加载梯队池数据失败'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = useMemo(
+    () => list.filter((m) => level === 'all' || m.pool_level === level),
+    [list, level],
+  );
+
+  const l1 = list.filter((m) => m.pool_level === 'L1').length;
+  const l2 = list.filter((m) => m.pool_level === 'L2').length;
+  const l3 = list.filter((m) => m.pool_level === 'L3').length;
+
+  const nameOf = (id: string) => emps.get(id)?.name ?? '—';
+  const posOf = (id: string) => emps.get(id)?.position ?? '—';
 
   return (
     <div className="page" style={{ maxWidth: 1300 }}>
@@ -29,9 +50,9 @@ export function TalentPool() {
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         {([
-          { lv: 'L1' as PoolLevel, count: l1 },
-          { lv: 'L2' as PoolLevel, count: l2 },
-          { lv: 'L3' as PoolLevel, count: l3 },
+          { lv: 'L1', count: l1 },
+          { lv: 'L2', count: l2 },
+          { lv: 'L3', count: l3 },
         ]).map((s) => (
           <Col span={8} key={s.lv}>
             <Card variant="borderless" style={{ background: 'var(--surface)', borderTop: `3px solid ${LEVEL_COLOR[s.lv]}` }}>
@@ -45,29 +66,31 @@ export function TalentPool() {
 
       <Card variant="borderless" style={{ background: 'var(--surface)' }} title="梯队成员清单" size="small">
         <Table
-          rowKey="employeeId"
-          dataSource={list}
+          rowKey="id"
+          dataSource={filtered}
+          loading={loading}
           pagination={false}
+          locale={{ emptyText: <Empty description="暂无梯队成员，可通过盘点或继任规划入池" /> }}
           columns={[
-            { title: '成员', render: (_: unknown, r) => (
+            { title: '成员', render: (_: unknown, r: TalentPoolOut) => (
               <Space direction="vertical" size={2}>
-                <span style={{ fontWeight: 600 }}>{r.name}</span>
-                <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>{r.position}</span>
+                <span style={{ fontWeight: 600 }}>{nameOf(r.employee_id)}</span>
+                <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>{posOf(r.employee_id)}</span>
               </Space>
             )},
             {
               title: '梯队层级',
-              dataIndex: 'level',
-              render: (v: PoolLevel) => (
-                <Tag style={{ borderRadius: 6, background: LEVEL_COLOR[v] + '22', color: LEVEL_COLOR[v], borderColor: 'transparent' }}>{POOL_LEVEL_LABEL[v]}</Tag>
+              dataIndex: 'pool_level',
+              render: (v: string) => (
+                <Tag style={{ borderRadius: 6, background: LEVEL_COLOR[v] + '22', color: LEVEL_COLOR[v], borderColor: 'transparent' }}>{POOL_LEVEL_LABEL[v] ?? v}</Tag>
               ),
             },
             { title: '入池依据', dataIndex: 'reason', ellipsis: true },
-            { title: '入池时间', dataIndex: 'joinedAt' },
+            { title: '入池时间', dataIndex: 'joined_at' },
             {
               title: '状态',
               dataIndex: 'status',
-              render: (v: 'active' | 'graduated' | 'exited') => <Tag style={{ borderRadius: 6 }}>{STATUS_LABEL[v]}</Tag>,
+              render: (v: string) => <Tag style={{ borderRadius: 6 }}>{STATUS_LABEL[v] ?? v}</Tag>,
             },
             {
               title: '操作',

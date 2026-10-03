@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { AppLayout } from '@/components/AppLayout';
 import { Login } from '@/pages/Login';
+import { useAuth } from '@/store/auth';
 import { Home } from '@/pages/Home';
 import { StyleGuide } from '@/pages/StyleGuide';
 import { ComingSoon } from '@/pages/ComingSoon';
@@ -78,7 +80,45 @@ import { PlatformTenants } from '@/pages/PlatformTenants';
 import { PlatformBoard } from '@/pages/PlatformBoard';
 import { WsTenant } from '@/pages/WsTenant';
 import { WsPlatform } from '@/pages/WsPlatform';
+import { PerfStandards } from '@/pages/PerfStandards';
+// 批次 9 · 数据中枢 + 应用中心容器
+import {
+  AppContainer,
+  HUB_STANDARDS,
+  HUB_PERF_STANDARDS,
+  HUB_PROFILES,
+  HUB_HEADCOUNT,
+  HUB_ORG,
+  HUB_COCKPIT,
+  APP_CERT,
+  APP_DEV,
+  APP_PERF,
+  APP_RECRUIT,
+  APP_GAP,
+  APP_STRUCTURE_OPT,
+  APP_SUCCESSION,
+  APP_POOL,
+  APP_SALARY,
+  APP_NINE_GRID,
+  APP_STRUCTURE_MAP,
+} from '@/app/apps';
 import { SciBackground } from '@/components/SciBackground';
+import { Spin } from 'antd';
+import { getToken } from '@/api/client';
+
+/** 登录守卫：未登录跳登录页；token 恢复中显示等待态 */
+function RequireAuth({ children }: { children: ReactNode }) {
+  const persona = useAuth((s) => s.persona);
+  if (persona) return <>{children}</>;
+  if (getToken()) {
+    return (
+      <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
+        <Spin tip="正在恢复会话…" />
+      </div>
+    );
+  }
+  return <Navigate to="/login" replace />;
+}
 
 export function AppRoutes() {
   return (
@@ -87,7 +127,7 @@ export function AppRoutes() {
       <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}>
         <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/app" element={<AppLayout />}>
+        <Route path="/app" element={<RequireAuth><AppLayout /></RequireAuth>}>
           <Route index element={<Navigate to="/app/home" replace />} />
           <Route path="home" element={<Home />} />
           <Route path="style-guide" element={<StyleGuide />} />
@@ -166,6 +206,25 @@ export function AppRoutes() {
           <Route path="platform-board" element={<PlatformBoard />} />
           <Route path="ws-tenant" element={<WsTenant />} />
           <Route path="ws-platform" element={<WsPlatform />} />
+          <Route path="perf-standards" element={<PerfStandards />} />
+          {/* 批次 9 · 数据中枢 + 应用中心容器 */}
+          <Route path="hub-standards" element={<AppContainer def={HUB_STANDARDS} />} />
+          <Route path="hub-perf-standards" element={<AppContainer def={HUB_PERF_STANDARDS} />} />
+          <Route path="hub-profiles" element={<AppContainer def={HUB_PROFILES} />} />
+          <Route path="hub-headcount" element={<AppContainer def={HUB_HEADCOUNT} />} />
+          <Route path="hub-org" element={<AppContainer def={HUB_ORG} />} />
+          <Route path="hub-cockpit" element={<AppContainer def={HUB_COCKPIT} />} />
+          <Route path="app-cert" element={<AppContainer def={APP_CERT} />} />
+          <Route path="app-dev" element={<AppContainer def={APP_DEV} />} />
+          <Route path="app-perf" element={<AppContainer def={APP_PERF} />} />
+          <Route path="app-recruit" element={<AppContainer def={APP_RECRUIT} />} />
+          <Route path="app-gap" element={<AppContainer def={APP_GAP} />} />
+          <Route path="app-structure-opt" element={<AppContainer def={APP_STRUCTURE_OPT} />} />
+          <Route path="app-succession" element={<AppContainer def={APP_SUCCESSION} />} />
+          <Route path="app-pool" element={<AppContainer def={APP_POOL} />} />
+          <Route path="app-salary" element={<AppContainer def={APP_SALARY} />} />
+          <Route path="app-nine-grid" element={<AppContainer def={APP_NINE_GRID} />} />
+          <Route path="app-structure-map" element={<AppContainer def={APP_STRUCTURE_MAP} />} />
           <Route path="page/:key" element={<ComingSoon />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

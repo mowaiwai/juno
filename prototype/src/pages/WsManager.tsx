@@ -1,13 +1,19 @@
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Card, Col, Row, Space, Table, Tag } from 'antd';
+import { Button, Card, Col, Row, Space, Spin, Table, Tag, message } from 'antd';
 import { AuditOutlined, TeamOutlined, WarningOutlined } from '@ant-design/icons';
 import { useAuth, useDataScope } from '@/store/auth';
+import { USE_MOCK } from '@/api/config';
+import { notificationsApi } from '@/api/notifications';
+import type { NoticeItem } from '@/mock/notifications';
+import { managerApi } from '@/api/manager';
+import { APPLICATION_STATUS_META, type ApplicationListItemDTO } from '@/api/applications';
 import { employees as allEmployees } from '@/mock/people';
 import { deptName } from '@/mock/org';
 import { certifications, CERT_ROUTER_LABEL, CERT_STAGE_LABEL } from '@/mock/certifications';
 import { todosOf } from '@/mock/notifications';
 
-export function WsManager() {
+function MockWsManager() {
   const persona = useAuth((s) => s.persona);
   const scope = useDataScope();
   const team = scope(allEmployees);
@@ -162,4 +168,195 @@ export function WsManager() {
       </Row>
     </div>
   );
+}
+
+// ============ 真实 API 模式 ============
+
+function RealWsManager() {
+  const persona = useAuth((s) => s.persona);
+  const [pending, setPending] = useState<ApplicationListItemDTO[] | null>(null);
+  const [inCommittee, setInCommittee] = useState<ApplicationListItemDTO[] | null>(null);
+  const [published, setPublished] = useState<ApplicationListItemDTO[] | null>(null);
+  const [todos, setTodos] = useState<NoticeItem[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [p, c, pub, n] = await Promise.all([
+        managerApi.list('submitted').catch(() => [] as ApplicationListItemDTO[]),
+        managerApi.list('in_committee_review').catch(() => [] as ApplicationListItemDTO[]),
+        managerApi.list('published').catch(() => [] as ApplicationListItemDTO[]),
+        notificationsApi.list().catch(() => [] as NoticeItem[]),
+      ]);
+      setPending(p);
+      setInCommittee(c);
+      setPublished(pub);
+      setTodos(n);
+    } catch {
+      message.error('工作台数据加载失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const todoItems = (todos ?? []).filter((n) => n.kind === 'todo' && !n.doneAt);
+
+  const columns = [
+    { title: '员工', dataIndex: 'employee_name', render: (v: string | null) => v ?? '—' },
+    {
+      title: '目标',
+      render: (_: unknown, r: ApplicationListItemDTO) => `${r.target_sequence}-${r.target_grade}`,
+    },
+    {
+      title: '环节',
+      render: (_: unknown, r: ApplicationListItemDTO) => {
+        const meta = APPLICATION_STATUS_META[r.status];
+        return (
+          <Tag style={{ borderRadius: 6, background: meta?.bg, color: meta?.color, borderColor: 'transparent' }}>
+            {meta?.label ?? r.status}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: '提交时间',
+      dataIndex: 'submitted_at',
+      render: (v: string | null) => (v ? v.slice(0, 10) : '—'),
+    },
+  ];
+
+  return (
+    <div className="page" style={{ maxWidth: 1280 }}>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title font-serif">{persona?.name}的工作台</h1>
+          <div className="page-subtitle">团队认证初审 · 数据范围：所辖组织子树</div>
+        </div>
+        <Space>
+          <Link to="/app/cert-review"><Button icon={<AuditOutlined />}>认证审核台</Button></Link>
+          <Link to="/app/talent-profile"><Button type="primary" style={{ background: 'var(--charcoal)' }}>团队画像</Button></Link>
+        </Space>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 60 }}><Spin /></div>
+      ) : (
+        <>
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            {[
+              { label: '待我初审', value: pending?.length ?? 0, sub: 'submitted' },
+              { label: '委员会评审中', value: inCommittee?.length ?? 0, sub: '我已初审通过' },
+              { label: '已完成认证', value: published?.length ?? 0, sub: '已发布' },
+              { label: '我的待办', value: todoItems.length, sub: '消息中心' },
+            ].map((s) => (
+              <Col span={6} key={s.label}>
+                <Card variant="borderless" style={{ background: 'var(--surface)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{s.label}</div>
+                  <div className="num" style={{ fontSize: 28, fontWeight: 700, marginTop: 2 }}>{s.value}</div>
+                  <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{s.sub}</div>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={15}>
+              <Card
+                variant="borderless"
+                style={{ background: 'var(--surface)', marginBottom: 16 }}
+                title={`待我初审（${pending?.length ?? 0}）`}
+                extra={<Link to="/app/cert-review"><Button type="text" size="small">进审核台</Button></Link>}
+              >
+                <Table
+                  size="small"
+                  rowKey="id"
+                  dataSource={pending ?? []}
+                  pagination={false}
+                  locale={{ emptyText: '暂无待初审申请' }}
+                  columns={columns}
+                />
+              </Card>
+
+              <Card
+                variant="borderless"
+                style={{ background: 'var(--surface)', marginBottom: 16 }}
+                title={`评审中（${inCommittee?.length ?? 0}）`}
+              >
+                <Table
+                  size="small"
+                  rowKey="id"
+                  dataSource={inCommittee ?? []}
+                  pagination={false}
+                  locale={{ emptyText: '暂无评审中申请' }}
+                  columns={columns}
+                />
+              </Card>
+
+              <Card
+                variant="borderless"
+                style={{ background: 'var(--surface)' }}
+                title={`待我处理（${todoItems.length}）`}
+                extra={<Link to="/app/notifications"><Button type="text" size="small">全部消息</Button></Link>}
+              >
+                <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                  {todoItems.map((t) => (
+                    <div
+                      key={t.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                        borderRadius: 10, border: '1px solid var(--line)',
+                        background: t.level === 'urgent' ? 'var(--clay-soft)' : 'var(--surface-sunken)',
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>
+                          {t.level === 'urgent' && <span style={{ color: 'var(--clay-hover)', marginRight: 6 }}>●</span>}
+                          {t.title}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>{t.desc}</div>
+                      </div>
+                      {t.link && <Link to={t.link}><Button size="small">{t.linkLabel ?? '处理'}</Button></Link>}
+                    </div>
+                  ))}
+                  {todoItems.length === 0 && <span style={{ color: 'var(--ink-3)' }}>暂无待办</span>}
+                </Space>
+              </Card>
+            </Col>
+
+            <Col span={9}>
+              <Card variant="borderless" style={{ background: 'var(--surface)' }} title="管理快捷入口" size="small">
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  {[
+                    { key: 'talent-profile', label: '团队七维画像', desc: '逐人查看雷达与摘要' },
+                    { key: 'roster', label: '团队花名册', desc: '数据范围自动过滤' },
+                    { key: 'gap-board', label: '人岗差距看板', desc: '批次 5 交付' },
+                    { key: 'nine-grid', label: '九宫格校准', desc: '批次 4 交付' },
+                  ].map((q) => (
+                    <Link key={q.key} to={`/app/${q.key}`}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface-sunken)' }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{q.label}</div>
+                          <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{q.desc}</div>
+                        </div>
+                        <span style={{ color: 'var(--ink-4)' }}>›</span>
+                      </div>
+                    </Link>
+                  ))}
+                </Space>
+              </Card>
+            </Col>
+          </Row>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function WsManager() {
+  return USE_MOCK ? <MockWsManager /> : <RealWsManager />;
 }

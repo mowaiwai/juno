@@ -70,6 +70,8 @@ export interface Persona {
   tenantId: string;
   tenantName: string;
   blurb: string;
+  family?: string;
+  grade?: string;
 }
 
 export interface StandardSummary {

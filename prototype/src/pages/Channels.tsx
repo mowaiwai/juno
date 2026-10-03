@@ -1,10 +1,9 @@
-import { Card, Collapse, Space, Tabs, Tag, Typography, Alert } from 'antd';
+import { useEffect, useState } from 'react';
+import { Card, Collapse, Space, Tabs, Tag, Typography, Alert, Spin, message } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
-import { channels, FAMILY_LABEL } from '@/mock/channels';
-import type { ChannelFamily, GradeBand } from '@/mock/channels';
+import { orgApi, type ChannelFamily, type GradeBand, type FamilyLabelMap } from '@/api/org';
 import { useAuth } from '@/store/auth';
-import { employeeById } from '@/mock/people';
-import type { Family } from '@/types';
+import { authApi } from '@/api/auth';
 
 function GradeCard({
   grade,
@@ -46,19 +45,19 @@ function GradeCard({
         className="num"
         style={{ fontSize: 12, color: 'var(--ink-3)', margin: '8px 0 2px' }}
       >
-        {grade.bandRange}
+        {grade.band_range}
       </div>
       <div className="num" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-        ¥ {grade.salaryBand[0].toLocaleString()} ~{' '}
-        {grade.salaryBand[1].toLocaleString()} / 月
+        ¥ {grade.salary_band[0].toLocaleString()} ~{' '}
+        {grade.salary_band[1].toLocaleString()} / 月
       </div>
       <div style={{ marginTop: 10, fontSize: 12, color: 'var(--ink-3)' }}>
-        {grade.promoteRule}
+        {grade.promote_rule}
       </div>
-      {grade.reviewYears && (
+      {grade.review_years && (
         <div style={{ marginTop: 10 }}>
           <Tag icon={<SyncOutlined />} style={{ borderRadius: 6, background: 'var(--ochre-soft)', color: 'var(--ochre)', borderColor: 'transparent' }}>
-            每 {grade.reviewYears} 年复评认证
+            每 {grade.review_years} 年复评认证
           </Tag>
         </div>
       )}
@@ -66,7 +65,15 @@ function GradeCard({
   );
 }
 
-function FamilyPanel({ ch, myFamily, myGrade }: { ch: ChannelFamily; myFamily: Family; myGrade: string }) {
+function FamilyPanel({
+  ch,
+  myFamily,
+  myGrade,
+}: {
+  ch: ChannelFamily;
+  myFamily: string | null;
+  myGrade: string | null;
+}) {
   return (
     <div>
       <div style={{ marginBottom: 16, color: 'var(--ink-2)', fontSize: 13 }}>
@@ -100,9 +107,25 @@ function FamilyPanel({ ch, myFamily, myGrade }: { ch: ChannelFamily; myFamily: F
 
 export function Channels() {
   const persona = useAuth((s) => s.persona);
-  const self = employeeById(persona?.employeeId);
-  const myFamily = self?.family;
-  const myGrade = self?.grade;
+  const [channels, setChannels] = useState<ChannelFamily[]>([]);
+  const [familyLabel, setFamilyLabel] = useState<FamilyLabelMap>({});
+  const [myFamily, setMyFamily] = useState<string | null>(null);
+  const [myGrade, setMyGrade] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([orgApi.channels(), orgApi.familyLabel(), authApi.me()])
+      .then(([c, fl, me]) => {
+        setChannels(c);
+        setFamilyLabel(fl);
+        setMyFamily(me.family);
+        setMyGrade(me.grade);
+      })
+      .catch(() => message.error('加载职级通道失败'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Spin style={{ display: 'block', padding: 80 }} />;
 
   return (
     <div className="page">
@@ -113,7 +136,7 @@ export function Channels() {
             五大职族 × 职级 × 薪级带宽 · 专业/管理双通道同酬对应 · 高阶职级实行周期复评
           </div>
         </div>
-        {self && myFamily && (
+        {myFamily && myGrade && (
           <Tag style={{ borderRadius: 8, padding: '4px 12px', borderColor: 'var(--clay-soft)', background: 'var(--clay-soft)', color: 'var(--clay-hover)' }}>
             {persona?.name} · {myFamily} 族 {myGrade}
           </Tag>
@@ -131,7 +154,7 @@ export function Channels() {
         message={
           <span>
             <span className="ai-badge" style={{ marginRight: 8 }}>AI 建议</span>
-            你的职级所在的带宽与近年调薪记录，可在「我的通道」（批次 3）中查看个人定位与晋升路径模拟。
+            你的职级所在的带宽与近年调薪记录，可在「我的通道」中查看个人定位与晋升路径模拟。
           </span>
         }
       />
@@ -141,12 +164,12 @@ export function Channels() {
           defaultActiveKey={myFamily ?? 'P'}
           items={channels.map((ch) => ({
             key: ch.family,
-            label: `${ch.family} · ${FAMILY_LABEL[ch.family]}`,
+            label: `${ch.family} · ${familyLabel[ch.family] ?? ch.name}`,
             children: (
               <FamilyPanel
                 ch={ch}
-                myFamily={(myFamily ?? 'P') as Family}
-                myGrade={myGrade ?? ''}
+                myFamily={myFamily}
+                myGrade={myGrade}
               />
             ),
           }))}

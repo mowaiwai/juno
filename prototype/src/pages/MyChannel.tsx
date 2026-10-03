@@ -1,16 +1,66 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Alert, Button, Card, Space, Tag } from 'antd';
+import { Alert, Button, Card, Space, Spin, Tag, message } from 'antd';
 import { CheckCircleFilled, RightOutlined } from '@ant-design/icons';
 import { useAuth } from '@/store/auth';
-import { employeeById } from '@/mock/people';
-import { channels } from '@/mock/channels';
-import { certByEmployee } from '@/mock/certifications';
+import { orgApi, type ChannelFamily, type GradeBand } from '@/api/org';
+import { applicationsApi, APPLICATION_STATUS_META, type ApplicationListItemDTO, type ApplicationStatusValue } from '@/api/applications';
+import { ApiError } from '@/api/client';
+
+const IN_FLIGHT_STATUSES: ApplicationStatusValue[] = [
+  'draft',
+  'submitted',
+  'in_manager_review',
+  'in_committee_review',
+  'approved',
+];
 
 export function MyChannel() {
   const persona = useAuth((s) => s.persona);
-  const emp = employeeById(persona?.employeeId);
-  const family = channels.find((c) => c.family === (emp?.family ?? 'P'))!;
-  const inFlightCert = emp ? certByEmployee(emp.id).find((c) => !['passed', 'terminated'].includes(c.stage)) : undefined;
+  const [channels, setChannels] = useState<ChannelFamily[] | null>(null);
+  const [apps, setApps] = useState<ApplicationListItemDTO[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      orgApi.channels().catch(() => {
+        message.error('通道数据加载失败');
+        return [] as ChannelFamily[];
+      }),
+      applicationsApi
+        .mine()
+        .then((list) => list)
+        .catch((e: unknown) => {
+          if (e instanceof ApiError && e.status === 401) return [] as ApplicationListItemDTO[];
+          message.error('认证记录加载失败');
+          return [] as ApplicationListItemDTO[];
+        }),
+    ]).then(([ch, ap]) => {
+      setChannels(ch);
+      setApps(ap);
+      setError(null);
+    });
+  }, []);
+
+  if (channels === null || apps === null) {
+    return (
+      <div style={{ textAlign: 'center', padding: 80 }}>
+        <Spin />
+      </div>
+    );
+  }
+
+  const family = channels.find((c) => c.family === (persona?.family ?? 'P'));
+  const myGrade = persona?.grade ?? 'P0';
+  const inFlightCert = apps.find((a) => IN_FLIGHT_STATUSES.includes(a.status));
+
+  if (!family) {
+    return (
+      <div className="page" style={{ maxWidth: 720 }}>
+        <Alert type="warning" showIcon message="未找到当前职族通道配置" />
+      </div>
+    );
+  }
 
   return (
     <div className="page" style={{ maxWidth: 1080 }}>
@@ -18,18 +68,22 @@ export function MyChannel() {
         <div>
           <h1 className="page-title font-serif">我的通道</h1>
           <div className="page-subtitle">
-            {family.name} · 当前 {emp?.grade}（{family.grades.find((g) => g.grade === emp?.grade)?.title}）· 通道与带宽为制度公开数据
+            {family.name} · 当前 {myGrade}（{family.grades.find((g) => g.grade === myGrade)?.title ?? '—'}）· 通道与带宽为制度公开数据
           </div>
         </div>
       </div>
 
+      {error && (
+        <Alert type="error" showIcon style={{ marginBottom: 16 }} message={error} />
+      )}
+
       {/* 职级阶梯 */}
       <Card variant="borderless" style={{ background: 'var(--surface)', marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
-          {family.grades.map((g, i) => {
-            const isCurrent = g.grade === emp?.grade;
-            const isTarget = inFlightCert ? g.grade === inFlightCert.toGrade : false;
-            const passed = Number(g.grade.replace(/\D/g, '')) < Number((emp?.grade ?? 'P0').replace(/\D/g, ''));
+          {family.grades.map((g: GradeBand, i: number) => {
+            const isCurrent = g.grade === myGrade;
+            const isTarget = inFlightCert ? g.grade === inFlightCert.target_grade : false;
+            const passed = Number(g.grade.replace(/\D/g, '')) < Number(myGrade.replace(/\D/g, ''));
             return (
               <div key={g.grade} style={{ flex: 1, position: 'relative' }}>
                 <div
@@ -39,7 +93,6 @@ export function MyChannel() {
                     height: '100%',
                     border: isCurrent ? '2px solid var(--clay)' : isTarget ? '2px dashed var(--ochre)' : '1px solid var(--line)',
                     background: isCurrent ? 'var(--clay-soft)' : isTarget ? 'var(--ochre-soft)' : 'var(--surface-sunken)',
-                    marginTop: (family.grades.length - 1 - i) * 0,
                   }}
                 >
                   <Space size={6}>
@@ -50,13 +103,13 @@ export function MyChannel() {
                   </Space>
                   <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{g.title}</div>
                   <div className="num" style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 6 }}>
-                    {g.bandRange} · ¥{g.salaryBand[0].toLocaleString()}~{g.salaryBand[1].toLocaleString()}
+                    {g.band_range} · ¥{g.salary_band[0].toLocaleString()}~{g.salary_band[1].toLocaleString()}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 8, lineHeight: 1.7, minHeight: 52 }}>
-                    {g.promoteRule}
+                    {g.promote_rule}
                   </div>
-                  {g.reviewYears && (
-                    <div style={{ fontSize: 11, color: 'var(--ochre)', marginTop: 4 }}>每 {g.reviewYears} 年复评</div>
+                  {g.review_years && (
+                    <div style={{ fontSize: 11, color: 'var(--ochre)', marginTop: 4 }}>每 {g.review_years} 年复评</div>
                   )}
                 </div>
                 {i < family.grades.length - 1 && (
@@ -76,14 +129,18 @@ export function MyChannel() {
             showIcon
             message={
               <span>
-                {inFlightCert.sequence}-{inFlightCert.fromGrade} → {inFlightCert.toGrade} 认证进行中 · 路由：
-                {inFlightCert.router === 3 ? '管委会终审' : inFlightCert.router === 2 ? '认证小组表决' : '部门经理审批'}
+                {inFlightCert.target_sequence} 序列 · 目标职级 {inFlightCert.target_grade} 认证进行中 · 状态：
+                {APPLICATION_STATUS_META[inFlightCert.status].label}
               </span>
             }
-            description={`发起于 ${inFlightCert.initiatedAt}，举证截止 ${inFlightCert.deadline}。整体进度 ${inFlightCert.progress}%。`}
+            description={
+              inFlightCert.submitted_at
+                ? `提交于 ${inFlightCert.submitted_at.slice(0, 10)}`
+                : '草稿尚未提交，提交后进入初审'
+            }
             style={{ background: 'var(--surface-sunken)', border: '1px solid var(--line)' }}
             action={
-              <Link to="/app/cert-apply">
+              <Link to={`/app/cert-apply?app=${inFlightCert.id}`}>
                 <Button size="small" type="primary" style={{ background: 'var(--charcoal)' }}>继续认证</Button>
               </Link>
             }
@@ -97,7 +154,7 @@ export function MyChannel() {
       <Card variant="borderless" style={{ background: 'var(--surface)' }} title={`${family.name}发展路径`} size="small">
         <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 2 }}>
           {family.desc}。序列：{family.sequences.join(' / ')}。
-          专业族与管理族一一对应同酬，P4 及以上每 {family.grades.find((g) => g.reviewYears)?.reviewYears ?? 3} 年复评一次，复评不合格降 1 级并联动调薪。
+          专业族与管理族一一对应同酬，P4 及以上每 {family.grades.find((g) => g.review_years)?.review_years ?? 3} 年复评一次，复评不合格降 1 级并联动调薪。
         </div>
         <Link to="/app/my-gap" style={{ display: 'inline-block', marginTop: 12, color: 'var(--clay-hover)', fontSize: 13 }}>
           查看我与下一职级标准的差距 <RightOutlined style={{ fontSize: 11 }} />

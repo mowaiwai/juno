@@ -1,12 +1,20 @@
-import { useMemo, useState } from 'react';
-import { Card, Col, Empty, Row, Select, Space, Table, Tag } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Card, Col, Empty, Row, Select, Space, Spin, Table, Tag, message } from 'antd';
 import { useDataScope } from '@/store/auth';
 import { employees as allEmployees } from '@/mock/people';
 import { deptName } from '@/mock/org';
 import { DIMENSION_NAME, PROFILE_DIMENSIONS, profileVersions } from '@/mock/profiles';
 import { RadarChart } from '@/components/RadarChart';
+import { USE_MOCK } from '@/api/config';
+import { employeesApi } from '@/api/employees';
+import {
+  profilesApi,
+  type DimensionOut,
+  type ProfileOut,
+  type ProfileVersionItem,
+} from '@/api/profiles';
 
-export function ProfileCompare() {
+function MockProfileCompare() {
   const scope = useDataScope();
   const team = scope(allEmployees);
   /** 优先展示有多版本画像的员工 */
@@ -147,4 +155,270 @@ export function ProfileCompare() {
       </Row>
     </div>
   );
+}
+
+// ---------- 真实后端分支 ----------
+
+interface RealDimRow {
+  key: string;
+  name: string;
+  before: DimensionOut | undefined;
+  after: DimensionOut | undefined;
+  /** 两侧均有分数时为数值差，否则为 null */
+  delta: number | null;
+}
+
+function dimOf(p: ProfileOut | null, key: string): DimensionOut | undefined {
+  return p?.dimensions.find((d) => d.dimension_key === key);
+}
+
+function RealProfileCompare() {
+  const [eligible, setEligible] = useState<
+    { id: string; name: string; grade: string; position: string; versions: ProfileVersionItem[] }[]
+  >([]);
+  const [empId, setEmpId] = useState<string | undefined>(undefined);
+  const [a, setA] = useState<ProfileOut | null>(null);
+  const [b, setB] = useState<ProfileOut | null>(null);
+  const [scanning, setScanning] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  // 扫描全员画像版本，筛出 ≥2 版的员工
+  useEffect(() => {
+    let alive = true;
+    employeesApi
+      .list()
+      .then(async (dir) => {
+        const probed = await Promise.all(
+          dir.map(async (e) => {
+            try {
+              const versions = await profilesApi.versions(e.id);
+              return { ...e, versions };
+            } catch {
+              return { ...e, versions: [] as ProfileVersionItem[] };
+            }
+          }),
+        );
+        if (!alive) return;
+        const multi = probed.filter((e) => e.versions.length >= 2);
+        setEligible(multi);
+        if (multi.length) setEmpId(multi[0].id);
+      })
+      .catch(() => message.error('加载员工目录失败'))
+      .finally(() => {
+        if (alive) setScanning(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 选中员工后取最近两个版本的完整画像
+  useEffect(() => {
+    if (!empId) return;
+    const emp = eligible.find((e) => e.id === empId);
+    if (!emp) return;
+    const sorted = [...emp.versions].sort((x, y) => x.version_seq - y.version_seq);
+    const prev = sorted[sorted.length - 2];
+    const curr = sorted[sorted.length - 1];
+    setLoading(true);
+    Promise.all([
+      profilesApi.versionDetail(empId, prev.version_seq),
+      profilesApi.versionDetail(empId, curr.version_seq),
+    ])
+      .then(([pa, pb]) => {
+        setA(pa);
+        setB(pb);
+      })
+      .catch(() => {
+        setA(null);
+        setB(null);
+        message.error('加载画像版本失败');
+      })
+      .finally(() => setLoading(false));
+  }, [empId, eligible]);
+
+  const emp = eligible.find((e) => e.id === empId);
+
+  const deltaRows: RealDimRow[] = useMemo(
+    () =>
+      PROFILE_DIMENSIONS.map((d) => {
+        const before = dimOf(a, d.key);
+        const after = dimOf(b, d.key);
+        const delta =
+          before?.score != null && after?.score != null
+            ? after.score - before.score
+            : null;
+        return { key: d.key, name: DIMENSION_NAME[d.key], before, after, delta };
+      }),
+    [a, b],
+  );
+
+  const scoreOrZero = (p: ProfileOut | null, key: string) =>
+    dimOf(p, key)?.score ?? 0;
+  const scoreText = (d: DimensionOut | undefined) =>
+    d?.score != null ? d.score : '—';
+  const gradeText = (d: DimensionOut | undefined) =>
+    d?.grade_label ?? (d?.status === 'measured' ? '—' : '待测评');
+
+  if (scanning) {
+    return (
+      <div className="page" style={{ textAlign: 'center', paddingTop: 120 }}>
+        <Spin />
+      </div>
+    );
+  }
+
+  if (!emp || !a || !b) {
+    return (
+      <div className="page" style={{ maxWidth: 720 }}>
+        <Empty
+          description={
+            loading
+              ? '加载中…'
+              : '暂无含多版本画像的员工（对比需要至少两个画像周期）'
+          }
+        />
+      </div>
+    );
+  }
+
+  const aLabel = `v${a.version_seq}`;
+  const bLabel = `v${b.version_seq}`;
+
+  return (
+    <div className="page" style={{ maxWidth: 1200 }}>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title font-serif">画像版本对比</h1>
+          <div className="page-subtitle">跨周期对比七维变化，回看发展动作与认证回写的效果</div>
+        </div>
+        <Select
+          value={emp.id}
+          onChange={setEmpId}
+          style={{ width: 280 }}
+          options={eligible.map((e) => ({
+            value: e.id,
+            label: `${e.name} · ${e.grade} · ${e.position}（${e.versions.length} 版）`,
+          }))}
+        />
+      </div>
+
+      <Row gutter={16}>
+        <Col span={13}>
+          <Card
+            variant="borderless"
+            style={{ background: 'var(--surface)', marginBottom: 16 }}
+            title={
+              <Space>
+                <b style={{ fontSize: 15 }}>{emp.name}</b>
+                <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                  {emp.position} · {emp.grade}
+                </span>
+              </Space>
+            }
+          >
+            <RadarChart
+              height={320}
+              series={[
+                {
+                  name: aLabel,
+                  values: PROFILE_DIMENSIONS.map((d) => scoreOrZero(a, d.key)),
+                  color: '#7fb5d6',
+                },
+                {
+                  name: bLabel,
+                  values: PROFILE_DIMENSIONS.map((d) => scoreOrZero(b, d.key)),
+                  color: '#d96a8e',
+                },
+              ]}
+            />
+            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink-3)' }}>
+              {aLabel}（{a.generated_at.slice(0, 10)} · {a.source}）→ {bLabel}（
+              {b.generated_at.slice(0, 10)} · {b.source}）· 综合{' '}
+              {a.overall ?? '—'} → {b.overall ?? '—'}
+            </div>
+          </Card>
+
+          <Card variant="borderless" style={{ background: 'var(--surface)' }} title="变化归因（可溯源）" size="small">
+            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              {deltaRows.filter((r) => r.delta !== null && r.delta !== 0).length === 0 && (
+                <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                  两个版本间暂无数值变化；标注「待测评」的维度尚无数据源。
+                </div>
+              )}
+              {deltaRows
+                .filter((r) => r.delta !== null && r.delta !== 0)
+                .sort((x, y) => (y.delta ?? 0) - (x.delta ?? 0))
+                .map((r) => (
+                  <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                    <Tag style={{ borderRadius: 6, borderColor: 'transparent', background: (r.delta ?? 0) > 0 ? 'var(--sage-soft)' : 'var(--danger-soft)', color: (r.delta ?? 0) > 0 ? 'var(--sage)' : 'var(--danger)', minWidth: 44, textAlign: 'center' }}>
+                      {(r.delta ?? 0) > 0 ? '+' : ''}
+                      {r.delta}
+                    </Tag>
+                    <b style={{ width: 64 }}>{r.name}</b>
+                    <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>{r.after?.note}</span>
+                  </div>
+                ))}
+              <div style={{ fontSize: 12, color: 'var(--ink-4)', paddingTop: 6, borderTop: '1px dashed var(--line)' }}>
+                归因依据：认证回写记录 / 绩效中心 / IDP 完成记录 · 结论可反查数据来源。
+              </div>
+            </Space>
+          </Card>
+        </Col>
+
+        <Col span={11}>
+          <Card variant="borderless" style={{ background: 'var(--surface)' }} title="逐维对比" size="small">
+            <Table
+              size="small"
+              rowKey="key"
+              pagination={false}
+              dataSource={deltaRows}
+              columns={[
+                { title: '维度', dataIndex: 'name', width: 80, render: (v: string) => <b style={{ fontSize: 13 }}>{v}</b> },
+                {
+                  title: aLabel,
+                  width: 70,
+                  align: 'right',
+                  render: (_: unknown, r) => <span className="num" style={{ color: 'var(--ink-3)' }}>{scoreText(r.before)}</span>,
+                },
+                {
+                  title: bLabel,
+                  width: 70,
+                  align: 'right',
+                  render: (_: unknown, r) => <span className="num" style={{ fontWeight: 700 }}>{scoreText(r.after)}</span>,
+                },
+                {
+                  title: '变化',
+                  width: 60,
+                  align: 'right',
+                  render: (_: unknown, r) => (
+                    <span className="num" style={{ fontWeight: 700, color: r.delta == null ? 'var(--ink-4)' : r.delta > 0 ? 'var(--sage)' : r.delta < 0 ? 'var(--danger)' : 'var(--ink-4)' }}>
+                      {r.delta == null ? '—' : r.delta > 0 ? `+${r.delta}` : r.delta}
+                    </span>
+                  ),
+                },
+                {
+                  title: '评级变化',
+                  render: (_: unknown, r) =>
+                    gradeText(r.before) === gradeText(r.after) ? (
+                      <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{gradeText(r.after)}</span>
+                    ) : (
+                      <Space size={4}>
+                        <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>{gradeText(r.before)}</span>
+                        <span style={{ color: 'var(--ink-4)' }}>→</span>
+                        <Tag style={{ borderRadius: 6, fontSize: 11, borderColor: 'transparent', background: 'var(--sage-soft)', color: 'var(--sage)' }}>{gradeText(r.after)}</Tag>
+                      </Space>
+                    ),
+                },
+              ]}
+            />
+          </Card>
+        </Col>
+      </Row>
+    </div>
+  );
+}
+
+export function ProfileCompare() {
+  return USE_MOCK ? <MockProfileCompare /> : <RealProfileCompare />;
 }

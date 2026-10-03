@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Button,
   Card,
   Descriptions,
+  Empty,
   Space,
+  Spin,
   Table,
   Tabs,
   Tag,
@@ -17,6 +20,15 @@ import { standards, swP3Standard } from '@/mock/standards';
 import { Can } from '@/components/Can';
 import { useAuth } from '@/store/auth';
 import { ROLE_META } from '@/auth/rbac';
+import { USE_MOCK } from '@/api/config';
+import { ApiError } from '@/api/client';
+import { standardsApi, type StandardItemDTO, type StandardSetDTO } from '@/api/standards';
+
+const REAL_STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  published: '已发布',
+  archived: '已归档',
+};
 
 const KNOWLEDGE_TYPE: Record<number, string> = {
   1: '通用知识',
@@ -53,7 +65,7 @@ function LevelDots({ level, max = 4 }: { level: number; max?: number }) {
   );
 }
 
-export function StandardDetail() {
+export function MockStandardDetail() {
   const [params] = useSearchParams();
   const stdId = params.get('std') ?? 'std_sw';
   const persona = useAuth((s) => s.persona);
@@ -337,4 +349,212 @@ export function StandardDetail() {
       )}
     </div>
   );
+}
+
+const realItemColumns: ColumnsType<StandardItemDTO> = [
+  {
+    title: '编码',
+    dataIndex: 'code',
+    width: 130,
+    render: (v: string) => (
+      <span className="num" style={{ fontWeight: 650 }}>{v}</span>
+    ),
+  },
+  {
+    title: '标准项',
+    dataIndex: 'name',
+    width: 140,
+    render: (v: string) => <span style={{ fontWeight: 600 }}>{v}</span>,
+  },
+  { title: '描述', dataIndex: 'description' },
+  {
+    title: '达标要求（举证锚点）',
+    dataIndex: 'requirement',
+    render: (v: string) => (
+      <span style={{ color: 'var(--ink-2)' }}>
+        <FileDoneOutlined style={{ color: 'var(--sage)', marginRight: 6 }} />
+        {v}
+      </span>
+    ),
+  },
+  {
+    title: '权重',
+    dataIndex: 'weight',
+    width: 90,
+    align: 'right',
+    render: (v: number) => <span className="num">{v}%</span>,
+  },
+];
+
+function RealStandardDetail() {
+  const [params] = useSearchParams();
+  const setId = params.get('set');
+  const role = useAuth((s) => s.activeRole);
+  const [detail, setDetail] = useState<StandardSetDTO | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setErrorMsg(null);
+    (async () => {
+      try {
+        let id = setId;
+        if (!id) {
+          // 无参数：默认展示第一个已发布标准集
+          const rows = await standardsApi.list({ status: 'published' });
+          id = rows[0]?.id;
+        }
+        if (!id) {
+          if (alive) setDetail(null);
+          return;
+        }
+        const d = await standardsApi.get(id);
+        if (alive) setDetail(d);
+      } catch (e) {
+        if (alive) {
+          setDetail(null);
+          setErrorMsg(e instanceof ApiError ? e.message : '标准集加载失败');
+        }
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [setId]);
+
+  const onPublish = async () => {
+    if (!detail) return;
+    setPublishing(true);
+    try {
+      const d = await standardsApi.publish(detail.id);
+      setDetail(d);
+      message.success(`已发布 v${d.version}，同键旧发布版自动归档`);
+    } catch (e) {
+      message.error(e instanceof ApiError ? e.message : '发布失败');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const weightTotal = detail
+    ? detail.items.reduce((sum, i) => sum + Number(i.weight), 0)
+    : 0;
+
+  return (
+    <div className="page" style={{ maxWidth: 1080 }}>
+      <Link to="/app/standards-list">
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          style={{ marginBottom: 8, paddingLeft: 0 }}
+        >
+          返回标准库
+        </Button>
+      </Link>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 80 }}>
+          <Spin />
+        </div>
+      ) : !detail ? (
+        <Card variant="borderless" style={{ background: 'var(--surface)' }}>
+          <Empty description={errorMsg ?? '暂无标准集，请联系 HR 创建'} />
+        </Card>
+      ) : (
+        <>
+          <Card
+            variant="borderless"
+            style={{ background: 'var(--surface)', marginBottom: 16 }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 16,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 280 }}>
+                <Space size={10} align="center">
+                  <Typography.Title
+                    level={3}
+                    style={{ margin: 0, fontFamily: 'var(--font-serif)' }}
+                  >
+                    {detail.sequence} 序列 · {detail.target_grade} 标准
+                  </Typography.Title>
+                  <Tag
+                    style={{
+                      borderRadius: 6,
+                      background:
+                        detail.status === 'published'
+                          ? 'var(--sage-soft)'
+                          : 'var(--surface-sunken)',
+                      color:
+                        detail.status === 'published'
+                          ? 'var(--sage)'
+                          : 'var(--ink-3)',
+                      borderColor: 'transparent',
+                    }}
+                  >
+                    {REAL_STATUS_LABEL[detail.status] ?? detail.status}
+                  </Tag>
+                </Space>
+                <div style={{ color: 'var(--ink-3)', fontSize: 13, marginTop: 8 }}>
+                  版本 v{detail.version} ·
+                  {detail.published_at
+                    ? ` 发布于 ${detail.published_at.slice(0, 10)} ·`
+                    : ' 尚未发布 ·'}
+                  适用对象：{detail.sequence} 序列 {detail.target_grade}{' '}
+                  任职者 · 权重合计 {weightTotal}%
+                </div>
+              </div>
+              {role === 'hr' && detail.status === 'draft' && (
+                <Button
+                  type="primary"
+                  loading={publishing}
+                  onClick={onPublish}
+                >
+                  发布此版本
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          {detail.status === 'draft' && weightTotal !== 100 && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message={`权重合计为 ${weightTotal}%，须等于 100% 才能发布`}
+            />
+          )}
+
+          <Card variant="borderless" style={{ background: 'var(--surface)' }}>
+            <Table
+              rowKey="id"
+              size="middle"
+              columns={realItemColumns}
+              dataSource={detail.items}
+              pagination={false}
+            />
+            <Typography.Paragraph
+              type="secondary"
+              style={{ marginTop: 14, fontSize: 12, marginBottom: 0 }}
+            >
+              认证申请提交时锁定整版标准快照，后续版本修订不影响在途申请。
+            </Typography.Paragraph>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function StandardDetail() {
+  return USE_MOCK ? <MockStandardDetail /> : <RealStandardDetail />;
 }

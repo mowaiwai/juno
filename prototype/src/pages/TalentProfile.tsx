@@ -1,12 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Card, Col, Empty, Input, Row, Space, Table, Tag } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Card, Col, Empty, Input, Row, Space, Table, Tag, message } from 'antd';
 import { SearchOutlined, UserOutlined } from '@ant-design/icons';
-import { useDataScope } from '@/store/auth';
-import { employees as allEmployees } from '@/mock/people';
-import { deptName } from '@/mock/org';
-import { DIMENSION_NAME, PROFILE_DIMENSIONS, latestProfile, profileVersions } from '@/mock/profiles';
-import { bandOf } from '@/mock/channels';
-import { MaskedField } from '@/components/MaskedField';
+import { employeesApi, type EmployeeDirectoryItem } from '@/api/employees';
+import { profilesApi, type ProfileOut, type DimensionOut } from '@/api/profiles';
+import { DIMENSION_NAME, PROFILE_DIMENSIONS } from '@/mock/profiles';
 import { RadarChart } from '@/components/RadarChart';
 
 const GRADE_COLOR: Record<string, string> = {
@@ -16,23 +13,64 @@ const GRADE_COLOR: Record<string, string> = {
   待改进: 'var(--danger)',
 };
 
+/** 将后端 dimensions 数组转为 mock 风格的 Record，复用既有 UI */
+function dimsToRecord(dimensions: DimensionOut[]): Record<string, { score: number; grade: string; note: string }> {
+  const rec: Record<string, { score: number; grade: string; note: string }> = {};
+  for (const d of PROFILE_DIMENSIONS) {
+    const dim = dimensions.find((x) => x.dimension_key === d.key);
+    rec[d.key] = {
+      score: dim?.score ?? 0,
+      grade: dim?.grade_label ?? '—',
+      note: dim?.note ?? '',
+    };
+  }
+  return rec;
+}
+
 export function TalentProfile() {
-  const scope = useDataScope();
-  const team = scope(allEmployees);
+  const [emps, setEmps] = useState<EmployeeDirectoryItem[]>([]);
   const [keyword, setKeyword] = useState('');
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const [profile, setProfile] = useState<ProfileOut | null>(null);
+  const [versions, setVersions] = useState<{ version_seq: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    employeesApi.list().then((dir) => {
+      setEmps(dir);
+      if (dir.length) setSelectedId(dir[0].id);
+    }).catch(() => message.error('加载员工目录失败'));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    setLoading(true);
+    Promise.all([profilesApi.latest(selectedId), profilesApi.versions(selectedId)])
+      .then(([p, v]) => {
+        setProfile(p);
+        setVersions(v);
+      })
+      .catch(() => {
+        setProfile(null);
+        message.error('加载画像数据失败');
+      })
+      .finally(() => setLoading(false));
+  }, [selectedId]);
 
   const filtered = useMemo(
     () =>
-      team.filter(
-        (e) => e.name.includes(keyword) || e.id.includes(keyword.toUpperCase()) || e.position.includes(keyword),
+      emps.filter(
+        (e) =>
+          e.name.includes(keyword) ||
+          e.employee_no.includes(keyword.toUpperCase()) ||
+          e.position.includes(keyword),
       ),
-    [team, keyword],
+    [emps, keyword],
   );
 
   const emp = filtered.find((e) => e.id === selectedId) ?? filtered[0];
-  const profile = emp ? latestProfile(emp.id) : undefined;
-  const versions = emp ? profileVersions(emp.id) : [];
+  const dims = profile ? dimsToRecord(profile.dimensions) : {};
+  const versionLabel = profile ? `v${profile.version_seq}` : '';
 
   return (
     <div className="page" style={{ maxWidth: 1360 }}>
@@ -46,12 +84,12 @@ export function TalentProfile() {
       </div>
 
       <Row gutter={16}>
-        {/* 左：人员列表（数据范围内） */}
+        {/* 左：人员列表 */}
         <Col span={7}>
           <Card
             variant="borderless"
             style={{ background: 'var(--surface)' }}
-            title={`人员（数据范围 ${team.length} 人）`}
+            title={`人员（${emps.length} 人）`}
             size="small"
           >
             <Input
@@ -65,7 +103,6 @@ export function TalentProfile() {
             />
             <div style={{ maxHeight: 560, overflowY: 'auto' }}>
               {filtered.map((e) => {
-                const p = latestProfile(e.id);
                 const active = emp?.id === e.id;
                 return (
                   <div
@@ -96,15 +133,17 @@ export function TalentProfile() {
                       <div style={{ fontSize: 13, fontWeight: 600 }}>
                         {e.name} <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 400 }}>{e.grade} · {e.position}</span>
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{deptName(e.deptId)} · {p.version}</div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{e.sequence} · {versionLabel || '—'}</div>
                     </div>
-                    <span className="num" style={{ fontSize: 15, fontWeight: 700, color: p.overall >= 80 ? 'var(--sage)' : p.overall >= 65 ? 'var(--ochre)' : 'var(--danger)' }}>
-                      {p.overall}
-                    </span>
+                    {profile && emp?.id === e.id && (
+                      <span className="num" style={{ fontSize: 15, fontWeight: 700, color: (profile.overall ?? 0) >= 80 ? 'var(--sage)' : (profile.overall ?? 0) >= 65 ? 'var(--ochre)' : 'var(--danger)' }}>
+                        {profile.overall}
+                      </span>
+                    )}
                   </div>
                 );
               })}
-              {filtered.length === 0 && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="范围内无匹配员工" />}
+              {filtered.length === 0 && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无匹配员工" />}
             </div>
           </Card>
         </Col>
@@ -113,7 +152,7 @@ export function TalentProfile() {
         <Col span={17}>
           {!emp || !profile ? (
             <Card variant="borderless" style={{ background: 'var(--surface)' }}>
-              <Empty description="选择左侧员工查看画像" />
+              <Empty description={loading ? '加载中…' : '该员工暂无画像'} />
             </Card>
           ) : (
             <>
@@ -124,16 +163,16 @@ export function TalentProfile() {
                   <Space>
                     <UserOutlined style={{ color: 'var(--clay)' }} />
                     <span style={{ fontSize: 16, fontWeight: 700 }}>{emp.name}</span>
-                    <Tag style={{ borderRadius: 6 }}>{emp.id}</Tag>
+                    <Tag style={{ borderRadius: 6 }}>{emp.employee_no}</Tag>
                     <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
-                      {deptName(emp.deptId)} · {emp.position} · {emp.family}-{emp.grade}
+                      {emp.sequence} · {emp.position} · {emp.grade}
                     </span>
                   </Space>
                 }
                 extra={
                   <Space size={6}>
                     {versions.length > 1 && <Tag style={{ borderRadius: 6, fontSize: 11, borderColor: 'var(--line)' }}>含 {versions.length} 个版本</Tag>}
-                    <Tag style={{ borderRadius: 6, fontSize: 11, background: 'var(--surface-sunken)', color: 'var(--ink-3)', borderColor: 'transparent' }}>{profile.version}</Tag>
+                    <Tag style={{ borderRadius: 6, fontSize: 11, background: 'var(--surface-sunken)', color: 'var(--ink-3)', borderColor: 'transparent' }}>{versionLabel}</Tag>
                   </Space>
                 }
               >
@@ -141,40 +180,18 @@ export function TalentProfile() {
                   <Col span={11}>
                     <RadarChart
                       height={260}
-                      series={[{ name: profile.version, values: PROFILE_DIMENSIONS.map((d) => profile.dims[d.key].score), color: '#d96a8e' }]}
+                      series={[{ name: versionLabel, values: PROFILE_DIMENSIONS.map((d) => dims[d.key]?.score ?? 0), color: '#d96a8e' }]}
                     />
                   </Col>
                   <Col span={13}>
                     <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 8 }}>
                       综合分 <span className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--clay)' }}>{profile.overall}</span>
-                      {'  '}· 生成 {profile.generatedAt} · {profile.source}
+                      {'  '}· 生成 {profile.generated_at?.slice(0, 10)} · {profile.source}
                     </div>
                     <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--surface-sunken)', border: '1px solid var(--line)', fontSize: 13, color: 'var(--ink-2)', lineHeight: 2 }}>
                       <span className="ai-badge" style={{ marginRight: 8 }}>AI 画像</span>
-                      {profile.summary}
+                      画像由系统按七维数据自动生成，详情见下方各维度说明。
                     </div>
-                    <Row gutter={8} style={{ marginTop: 12 }}>
-                      <Col span={8}>
-                        <div style={{ padding: 10, borderRadius: 10, background: 'var(--surface-sunken)', border: '1px solid var(--line)', textAlign: 'center' }}>
-                          <div className="num" style={{ fontSize: 18, fontWeight: 700 }}>{emp.perf}</div>
-                          <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>2025 绩效</div>
-                        </div>
-                      </Col>
-                      <Col span={8}>
-                        <div style={{ padding: 10, borderRadius: 10, background: 'var(--surface-sunken)', border: '1px solid var(--line)', textAlign: 'center' }}>
-                          <div className="num" style={{ fontSize: 18, fontWeight: 700, color: 'var(--teal)' }}>{emp.grid}</div>
-                          <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>九宫格</div>
-                        </div>
-                      </Col>
-                      <Col span={8}>
-                        <div style={{ padding: 10, borderRadius: 10, background: 'var(--surface-sunken)', border: '1px solid var(--line)', textAlign: 'center' }}>
-                          <div style={{ fontSize: 13, fontWeight: 600 }}>
-                            <MaskedField value={emp.salary} format={(v) => `¥${Number(v).toLocaleString()}`} />
-                          </div>
-                          <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>月薪（{bandOf(emp.family, emp.grade)?.bandRange ?? '带宽'}）</div>
-                        </div>
-                      </Col>
-                    </Row>
                   </Col>
                 </Row>
               </Card>
@@ -184,7 +201,7 @@ export function TalentProfile() {
                   size="small"
                   rowKey="key"
                   pagination={false}
-                  dataSource={PROFILE_DIMENSIONS.map((dim) => ({ dim, ...profile.dims[dim.key] }))}
+                  dataSource={PROFILE_DIMENSIONS.map((dim) => ({ dim, ...dims[dim.key] }))}
                   columns={[
                     { title: '维度', render: (_: unknown, r) => <b style={{ fontSize: 13 }}>{DIMENSION_NAME[r.dim.key]}</b> },
                     {
@@ -193,13 +210,13 @@ export function TalentProfile() {
                       render: (_: unknown, r) => (
                         <Space size={8}>
                           <div style={{ width: 120, height: 6, background: 'var(--surface-sunken)', borderRadius: 3, overflow: 'hidden' }}>
-                            <div style={{ width: `${r.score}%`, height: '100%', background: GRADE_COLOR[r.grade], borderRadius: 3 }} />
+                            <div style={{ width: `${r.score}%`, height: '100%', background: GRADE_COLOR[r.grade] || 'var(--ink-3)', borderRadius: 3 }} />
                           </div>
                           <span className="num" style={{ fontWeight: 700 }}>{r.score}</span>
                         </Space>
                       ),
                     },
-                    { title: '评级', width: 80, render: (_: unknown, r) => <Tag style={{ borderRadius: 6, borderColor: 'transparent', background: 'var(--surface-sunken)', color: GRADE_COLOR[r.grade], fontSize: 11 }}>{r.grade}</Tag> },
+                    { title: '评级', width: 80, render: (_: unknown, r) => <Tag style={{ borderRadius: 6, borderColor: 'transparent', background: 'var(--surface-sunken)', color: GRADE_COLOR[r.grade] || 'var(--ink-3)', fontSize: 11 }}>{r.grade}</Tag> },
                     { title: '数据来源与说明', render: (_: unknown, r) => <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{r.note}</span> },
                   ]}
                 />
