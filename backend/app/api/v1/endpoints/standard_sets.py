@@ -6,10 +6,15 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import (
+    Principal,
+    err,
+    get_principal,
+    require_perm_user,
+)
 from app.database import get_db
 from app.models.standard import StandardItem, StandardSet, StandardStatus
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.standard import (
     StandardSetCreate,
     StandardSetOut,
@@ -18,8 +23,13 @@ from app.schemas.standard import (
 
 router = APIRouter(prefix="/standard-sets", tags=["standard-sets"])
 
-# 仅 HR 可管理标准集
-_hr = require_roles(Role.HR)
+# OTD 管理标准库
+_hr = require_perm_user("standard.manage")
+_publish = require_perm_user("standard.publish")
+
+
+def _can_see_drafts(principal: Principal) -> bool:
+    return principal.can("standard.manage", "standard.publish")
 
 
 def _get_owned_set(db: Session, set_id, tenant_id) -> StandardSet:
@@ -92,9 +102,10 @@ def list_sets(
     target_grade: str | None = None,
     status: StandardStatus | None = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    # 租户内全角色可读；草稿仅 HR 可见
+    user = principal.user
+    # 租户内全角色可读已发布标准；草稿仅具标准管理权限者可见
     stmt = (
         select(StandardSet)
         .where(StandardSet.tenant_id == user.tenant_id)
@@ -107,18 +118,21 @@ def list_sets(
         stmt = stmt.where(StandardSet.target_grade == target_grade)
     if status:
         stmt = stmt.where(StandardSet.status == status)
-    if not user.has_any(Role.HR):
+    if not _can_see_drafts(principal):
         stmt = stmt.where(StandardSet.status != StandardStatus.DRAFT)
     return db.scalars(stmt).unique().all()
 
 
 @router.get("/{set_id}", response_model=StandardSetOut)
 def get_set(
-    set_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    set_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(get_principal),
 ):
+    user = principal.user
     row = _get_owned_set(db, set_id, user.tenant_id)
-    # 草稿仅 HR 可见，其他角色一律 404（不暴露草稿存在性）
-    if row.status == StandardStatus.DRAFT and not user.has_any(Role.HR):
+    # 草稿仅标准管理者可见，其他角色一律 404（不暴露草稿存在性）
+    if row.status == StandardStatus.DRAFT and not _can_see_drafts(principal):
         raise err(404, "not_found", "标准集不存在")
     return row
 
@@ -156,7 +170,7 @@ def update_set(
 def publish_set(
     set_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(_hr),
+    user: User = Depends(_publish),
 ):
     standard_set = _get_owned_set(db, set_id, user.tenant_id)
     if standard_set.status != StandardStatus.DRAFT:

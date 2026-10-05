@@ -12,6 +12,21 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+/**
+ * 当前激活角色 ref（内置角色名或 custom:<uuid>）。
+ * 由 store/auth.ts 在登录/bootstrap/切换角色后同步；
+ * client 不反向依赖 store，避免循环依赖。
+ */
+let activeRoleRef: string | null = null;
+
+export function setActiveRoleHeader(ref: string | null) {
+  activeRoleRef = ref;
+}
+
+export function getActiveRoleHeader(): string | null {
+  return activeRoleRef;
+}
+
 /** 后端统一错误体 */
 export class ApiError extends Error {
   constructor(
@@ -54,6 +69,8 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { ...(opts.headers ?? {}) };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
+  // 服务端强制单一激活角色：每次请求携带 X-Active-Role（仅有值时）
+  if (activeRoleRef) headers['X-Active-Role'] = activeRoleRef;
 
   let body: BodyInit | undefined;
   if (opts.rawBody !== undefined) {

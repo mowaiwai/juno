@@ -5,8 +5,9 @@
 幂等：若租户「星野制造」已存在则跳过；加 --reset 先删除该租户全部数据再重建。
 
 账号（密码统一 Juno12345）：
-    hr@juno.test        HR
+    hr@juno.test        综合 HR（一人全包，租户预设自定义角色）
     admin@juno.test     租户管理员
+    exec@juno.test      高管
     manager@juno.test   部门经理（陆行舟）
     lead@juno.test      评审组长
     rev1@juno.test      评委
@@ -49,8 +50,13 @@ from app.models.standard import StandardSet, StandardStatus, StandardItem
 from app.models.standard_snapshot import StandardSnapshot
 from app.models.succession import CorePosition, SuccessionCandidate, TalentPool
 from app.models.tenant_config import TenantConfig
-from app.models.user import Role, Tenant, User
+from app.models.compensation import TenantSalaryBand
+from app.models.org import Department
+from app.models.role_def import RoleScope, TenantRole
+from app.models.user import Role, Tenant, User, custom_role_ref
 from app.services.level_framework import seed_v1_framework
+from app.services.org_service import seed_departments
+from app.services.role_service import ensure_preset_all_hr
 
 TENANT_NAME = "星野制造"
 PASSWORD = "Juno12345"
@@ -101,21 +107,37 @@ def seed(session) -> None:
 
     now = datetime.now(timezone.utc)
 
+    # 部门树扶正（员工建账前先有部门主数据；领导在员工创建后绑定）
+    seed_departments(session, tenant.id)
+    session.flush()
+
+    # 综合 HR 预设自定义角色（七模板权限并集 + global）
+    preset_all_hr = ensure_preset_all_hr(session, tenant.id)
+    all_hr_ref = custom_role_ref(preset_all_hr.id)
+
     def make_user(email: str, name: str, role: Role,
-                  extra_roles: list[Role] | None = None) -> User:
-        all_roles = [role.value] + [r.value for r in (extra_roles or [])]
+                  extra_roles: list[Role] | None = None,
+                  role_refs: list[str] | None = None,
+                  active_role_ref: str | None = None) -> User:
+        if role_refs is None:
+            role_refs = [role.value] + [r.value for r in (extra_roles or [])]
         u = User(
             tenant_id=tenant.id,
             email=email,
             name=name,
             role=role,
-            roles=all_roles,
+            roles=role_refs,
+            active_role_ref=active_role_ref,
             hashed_password=hash_password(PASSWORD),
         )
         session.add(u)
         return u
 
-    hr_user = make_user("hr@juno.test", "温晚晴", Role.HR)
+    hr_user = make_user(
+        "hr@juno.test", "温晚晴", Role.EMPLOYEE,
+        role_refs=[Role.EMPLOYEE.value, all_hr_ref],
+        active_role_ref=all_hr_ref,
+    )
     make_user("admin@juno.test", "岑风眠", Role.TENANT_ADMIN)
     exec_user = make_user("exec@juno.test", "谢临渊", Role.EXECUTIVE)
     # 陆行舟：经理 + 评委，演示多角色视角切换
@@ -188,6 +210,9 @@ def seed(session) -> None:
         lowperf_user, "E10093", "305", "软件工程师", "P", "SW", "P3",
         date(2020, 3, 1), "C", manager=mgr_emp,
     )
+    session.flush()
+    # 员工已建账：绑定种子部门领导（E10002→201、E10020→305）并自动授经理角
+    seed_departments(session, tenant.id)
     session.flush()
     lowperf_emp = session.scalar(
         select(Employee).where(Employee.user_id == lowperf_user.id)
@@ -447,6 +472,20 @@ def reset_tenant(session, tenant: Tenant) -> None:
     session.execute(delete(CorePosition).where(CorePosition.tenant_id == tenant.id))
     session.execute(
         delete(Employee).where(Employee.tenant_id == tenant.id)
+    )
+    # RBAC 三支柱新表：部门（员工删除后再删，解开 dept/leader 环依赖）、
+    # 角色范围、租户自定义角色、薪级带宽
+    session.execute(
+        delete(Department).where(Department.tenant_id == tenant.id)
+    )
+    session.execute(
+        delete(RoleScope).where(RoleScope.tenant_id == tenant.id)
+    )
+    session.execute(
+        delete(TenantRole).where(TenantRole.tenant_id == tenant.id)
+    )
+    session.execute(
+        delete(TenantSalaryBand).where(TenantSalaryBand.tenant_id == tenant.id)
     )
     session.execute(delete(TenantConfig).where(TenantConfig.tenant_id == tenant.id))
     session.execute(delete(User).where(User.tenant_id == tenant.id))

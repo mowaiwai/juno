@@ -2,7 +2,7 @@ import { useParams, useLocation, Link } from 'react-router-dom';
 import { Tag, Button, Empty, Alert } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { getPage } from '@/app/registry';
-import { ROLE_META } from '@/auth/rbac';
+import { resolveRoleMeta } from '@/auth/rbac';
 import { useAuth } from '@/store/auth';
 
 const depthLabel: Record<string, string> = {
@@ -78,7 +78,7 @@ export function ComingSoon() {
                       color: r === activeRole ? 'var(--sage)' : undefined,
                     }}
                   >
-                    {ROLE_META[r].label}
+                    {resolveRoleMeta(r).label}
                   </Tag>
                 ))}
               </span>

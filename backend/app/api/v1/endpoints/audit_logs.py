@@ -6,10 +6,9 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_roles
+from app.core.deps import Principal, require_perm
 from app.database import get_db
 from app.models.audit import AuditLog
-from app.models.user import Role, User
 
 router = APIRouter(prefix="/audit-logs", tags=["audit-logs"])
 
@@ -32,8 +31,9 @@ def list_audit_logs(
     entity_id: uuid.UUID | None = None,
     action: str | None = None,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR, Role.TENANT_ADMIN)),
+    principal: Principal = Depends(require_perm("audit.view")),
 ):
+    user = principal.user
     """审计日志查询：本租户内，可按实体与动作过滤。只增不删。"""
     stmt = select(AuditLog).where(AuditLog.tenant_id == user.tenant_id)
     if entity_id is not None:

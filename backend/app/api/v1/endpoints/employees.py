@@ -1,21 +1,23 @@
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import (
+    Principal,
+    err,
+    get_principal,
+    require_perm,
+)
 from app.database import get_db
 from app.models.employee import Employee
-from app.models.user import Role, User
 from app.services.audit import audit_as
+from app.services.scope import apply_employee_scope, can_access_employee
 
 router = APIRouter(tags=["employees"])
-
-# 绩效等级合法取值（字母等级，不换算分数）
-PERF_GRADES = {"S", "A", "B", "C", "D"}
 
 
 class EmployeeDirectoryOut(BaseModel):
@@ -50,33 +52,28 @@ class EmployeeDetailOut(BaseModel):
     is_active: bool
     education: str | None = None
     certificates: list = []
+    # 定薪：无权时返回 None（前端掩码展示）
+    base_salary: int | None = None
+    salary_updated_at: datetime | None = None
 
 
-class PerfImportItem(BaseModel):
-    employee_no: str
-    perf_grade: str
+class OrgFieldsIn(BaseModel):
+    dept_id: str | None = None
+    position: str | None = None
+    family: str | None = None
+    sequence: str | None = None
+    grade: str | None = None
 
-    @field_validator("perf_grade")
+
+class SalaryIn(BaseModel):
+    base_salary: int
+
+    @field_validator("base_salary")
     @classmethod
-    def _validate_grade(cls, v: str) -> str:
-        grade = v.strip().upper()
-        if grade not in PERF_GRADES:
-            raise ValueError("绩效等级必须为 S/A/B/C/D")
-        return grade
-
-
-class PerfImportIn(BaseModel):
-    items: list[PerfImportItem]
-
-
-class PerfImportError(BaseModel):
-    employee_no: str
-    reason: str
-
-
-class PerfImportOut(BaseModel):
-    updated: int
-    errors: list[PerfImportError]
+    def _positive(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("月薪必须为正数")
+        return v
 
 
 def _manager_name(db: Session, manager_id) -> str | None:
@@ -86,47 +83,35 @@ def _manager_name(db: Session, manager_id) -> str | None:
     return mgr.name if mgr else None
 
 
+def _get_scoped_employee(
+    db: Session, principal: Principal, employee_id: uuid.UUID
+) -> Employee:
+    emp = db.get(Employee, employee_id)
+    if emp is None or emp.tenant_id != principal.user.tenant_id:
+        raise err(404, "employee_not_found", "员工不存在")
+    if not can_access_employee(db, principal, emp):
+        # 范围外统一 404 口径：完全不可见，不暴露存在性
+        raise err(404, "employee_not_found", "员工不存在")
+    return emp
+
+
 @router.get("/employees", response_model=list[EmployeeDirectoryOut])
 def list_employees(
     dept_id: str | None = Query(default=None, description="按部门 id 过滤"),
     db: Session = Depends(get_db),
-    user: User = Depends(
-        require_roles(Role.HR, Role.MANAGER, Role.EXECUTIVE, Role.TENANT_ADMIN)
-    ),
+    principal: Principal = Depends(require_perm("employee.view")),
 ):
-    """员工目录：花名册 / 组织树 / 岗位在编等场景共用。仅本租户。
-
-    数据范围（CONTEXT.md）：HR/高管/租户管理员看全员；经理沿 manager_id
-    递归看自己的下级（含本人）。
-    """
+    """员工目录：按激活角色数据范围过滤；绩效等级按字段权限掩码。"""
     stmt = (
         select(Employee)
-        .where(Employee.tenant_id == user.tenant_id)
+        .where(Employee.tenant_id == principal.user.tenant_id)
         .order_by(Employee.employee_no)
     )
     if dept_id:
         stmt = stmt.where(Employee.dept_id == dept_id)
+    stmt = apply_employee_scope(stmt, db, principal)
     rows = list(db.scalars(stmt).all())
 
-    is_full_scope = user.has_any(Role.HR, Role.EXECUTIVE, Role.TENANT_ADMIN)
-    if not is_full_scope:
-        me = next((e for e in rows if e.user_id == user.id), None)
-        if me is None:
-            return []
-        children: dict[uuid.UUID | None, list[Employee]] = {}
-        for e in rows:
-            children.setdefault(e.manager_id, []).append(e)
-        visible: set[uuid.UUID] = set()
-        stack = [me.id]
-        while stack:
-            pid = stack.pop()
-            if pid in visible:
-                continue
-            visible.add(pid)
-            stack.extend(c.id for c in children.get(pid, []))
-        rows = [e for e in rows if e.id in visible]
-
-    # 批量查 manager 名称
     manager_ids = {r.manager_id for r in rows if r.manager_id}
     mgr_map: dict[uuid.UUID, str] = {}
     if manager_ids:
@@ -146,7 +131,11 @@ def list_employees(
             sequence=r.sequence,
             grade=r.grade,
             grade_since=r.grade_since,
-            perf_grade=r.perf_grade,
+            perf_grade=(
+                r.perf_grade
+                if principal.can_view_perf(r.user_id)
+                else None
+            ),
             manager_id=r.manager_id,
             manager_name=mgr_map.get(r.manager_id) if r.manager_id else None,
             is_active=r.is_active,
@@ -159,15 +148,23 @@ def list_employees(
 def get_employee(
     employee_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    """单个员工详情（含基本条件补录）。本人或 HR 可查。"""
+    """单个员工详情（含基本条件补录与定薪）。
+
+    本人始终可查；他人需落在激活角色数据范围内。
+    绩效等级、定薪数据按字段权限掩码。
+    """
     emp = db.get(Employee, employee_id)
-    if emp is None or emp.tenant_id != user.tenant_id:
+    if emp is None or emp.tenant_id != principal.user.tenant_id:
         raise err(404, "employee_not_found", "员工不存在")
-    is_self = emp.user_id == user.id
-    if not is_self and not user.has_any(Role.HR):
-        raise err(403, "forbidden", "无权查看该员工档案")
+    is_self = emp.user_id == principal.user.id
+    if not is_self:
+        if not principal.can("employee.view") or not can_access_employee(
+            db, principal, emp
+        ):
+            raise err(404, "employee_not_found", "员工不存在")
+
     return EmployeeDetailOut(
         id=emp.id,
         employee_no=emp.employee_no,
@@ -178,58 +175,111 @@ def get_employee(
         sequence=emp.sequence,
         grade=emp.grade,
         grade_since=emp.grade_since,
-        perf_grade=emp.perf_grade,
+        perf_grade=(
+            emp.perf_grade if principal.can_view_perf(emp.user_id) else None
+        ),
         manager_id=emp.manager_id,
         manager_name=_manager_name(db, emp.manager_id),
         is_active=emp.is_active,
         education=emp.education,
         certificates=list(emp.certificates or []),
+        base_salary=(
+            emp.base_salary
+            if (principal.can("employee.salary.view") or is_self)
+            else None
+        ),
+        salary_updated_at=(
+            emp.salary_updated_at
+            if (principal.can("employee.salary.view") or is_self)
+            else None
+        ),
     )
 
 
-@router.put("/employees/perf", response_model=PerfImportOut)
-def import_perf_grades(
-    body: PerfImportIn,
+@router.put("/employees/{employee_id}/org-fields", response_model=EmployeeDetailOut)
+def update_org_fields(
+    employee_id: uuid.UUID,
+    body: OrgFieldsIn,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR)),
+    principal: Principal = Depends(require_perm("employee.field.org.edit")),
 ):
-    """绩效结果批量导入：按工号回写档案 perf_grade（HR）。
-
-    数据飞轮入口：绩效是画像 perf 维度与九宫格业绩轴的数据源；
-    回写后在盘点启动（初排快照）与发布（画像回写）时生效。
-    """
-    if not body.items:
-        raise err(422, "invalid_request", "导入内容为空")
-    rows = db.scalars(
-        select(Employee).where(Employee.tenant_id == user.tenant_id)
-    ).all()
-    by_no = {e.employee_no: e for e in rows}
-    updated = 0
-    errors: list[PerfImportError] = []
-    seen: set[str] = set()
-    for item in body.items:
-        no = item.employee_no.strip()
-        if not no or no in seen:
-            errors.append(
-                PerfImportError(
-                    employee_no=no, reason="工号为空" if not no else "工号重复"
-                )
-            )
-            continue
-        seen.add(no)
-        emp = by_no.get(no)
-        if emp is None:
-            errors.append(PerfImportError(employee_no=no, reason="工号不存在"))
-            continue
-        before = emp.perf_grade
-        if before == item.perf_grade:
-            continue
-        emp.perf_grade = item.perf_grade
+    """档案组织字段编辑（部门/岗位/职族/序列/职级）：OTD 负责。"""
+    emp = _get_scoped_employee(db, principal, employee_id)
+    changes: dict[str, str | None] = {}
+    for field in ("dept_id", "position", "family", "sequence", "grade"):
+        value = getattr(body, field)
+        if value is not None and value != getattr(emp, field):
+            changes[field] = value
+            setattr(emp, field, value)
+    if changes:
         audit_as(
-            db, user,
-            "perf_grade_imported", "employee", emp.id,
-            {"perf_grade": before}, {"perf_grade": item.perf_grade},
+            db, principal.user,
+            "employee_org_fields_updated", "employee", emp.id,
+            after=changes,
         )
-        updated += 1
     db.commit()
-    return PerfImportOut(updated=updated, errors=errors)
+    return EmployeeDetailOut(
+        id=emp.id,
+        employee_no=emp.employee_no,
+        name=emp.name,
+        dept_id=emp.dept_id,
+        position=emp.position,
+        family=emp.family,
+        sequence=emp.sequence,
+        grade=emp.grade,
+        grade_since=emp.grade_since,
+        perf_grade=(
+            emp.perf_grade if principal.can_view_perf(emp.user_id) else None
+        ),
+        manager_id=emp.manager_id,
+        manager_name=_manager_name(db, emp.manager_id),
+        is_active=emp.is_active,
+        education=emp.education,
+        certificates=list(emp.certificates or []),
+        base_salary=emp.base_salary if principal.can("employee.salary.view") else None,
+        salary_updated_at=(
+            emp.salary_updated_at if principal.can("employee.salary.view") else None
+        ),
+    )
+
+
+@router.put("/employees/{employee_id}/salary", response_model=EmployeeDetailOut)
+def update_salary(
+    employee_id: uuid.UUID,
+    body: SalaryIn,
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(require_perm("employee.salary.edit")),
+):
+    """定薪：COE·薪酬激励（编辑权隐含查看权）。"""
+    emp = _get_scoped_employee(db, principal, employee_id)
+    before = emp.base_salary
+    emp.base_salary = body.base_salary
+    emp.salary_updated_at = datetime.now(timezone.utc)
+    audit_as(
+        db, principal.user,
+        "employee_salary_updated", "employee", emp.id,
+        {"base_salary": before}, {"base_salary": body.base_salary},
+    )
+    db.commit()
+    return EmployeeDetailOut(
+        id=emp.id,
+        employee_no=emp.employee_no,
+        name=emp.name,
+        dept_id=emp.dept_id,
+        position=emp.position,
+        family=emp.family,
+        sequence=emp.sequence,
+        grade=emp.grade,
+        grade_since=emp.grade_since,
+        perf_grade=(
+            emp.perf_grade if principal.can_view_perf(emp.user_id) else None
+        ),
+        manager_id=emp.manager_id,
+        manager_name=_manager_name(db, emp.manager_id),
+        is_active=emp.is_active,
+        education=emp.education,
+        certificates=list(emp.certificates or []),
+        base_salary=emp.base_salary,
+        salary_updated_at=emp.salary_updated_at,
+    )
+

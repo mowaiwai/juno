@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import err, require_roles
+from app.core.deps import err, require_active_roles_user
 from app.database import get_db
 from app.models.application import Application, ApplicationStatus
 from app.models.employee import Employee
@@ -18,7 +18,7 @@ from app.services.review import claim_lock, is_lock_holder, release_lock
 router = APIRouter(prefix="/review", tags=["review"])
 
 # 评委与组长共用评审端点
-_panel_role = require_roles(Role.REVIEWER, Role.LEAD_REVIEWER)
+_panel_role = require_active_roles_user(Role.REVIEWER, Role.LEAD_REVIEWER)
 
 
 def _panel_employee(db: Session, user: User) -> Employee:

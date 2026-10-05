@@ -9,11 +9,11 @@ from collections import Counter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.v1.endpoints.org import DEPARTMENTS
 from app.config import settings
 from app.models.ai import AIUsage
 from app.models.employee import Employee
 from app.models.inventory import Potential
+from app.models.org import Department
 from app.services.ai import _ai_settings, _month_used, _tenant_config
 from app.services.inventory import distribution, list_batches, list_results
 from app.services.llm import get_client
@@ -26,8 +26,6 @@ SRC_EMPLOYEES = "员工名册"
 SRC_INVENTORY = "最新盘点"
 SRC_SUCCESSION = "继任概览"
 
-_DEPT_NAME = {d["id"]: d["name"] for d in DEPARTMENTS}
-
 
 # ---------------------------------------------------------------------------
 # 事实组装
@@ -39,9 +37,13 @@ def _facts_employees(db: Session, tenant_id) -> list[str]:
             Employee.tenant_id == tenant_id, Employee.is_active.is_(True)
         )
     ).all()
+    dept_rows = db.scalars(
+        select(Department).where(Department.tenant_id == tenant_id)
+    ).all()
+    dept_name = {d.id: d.name for d in dept_rows}
     by_dept = Counter(e.dept_id for e in emps)
     dept_text = "、".join(
-        f"{_DEPT_NAME.get(d, d)} {n}人" for d, n in by_dept.most_common()
+        f"{dept_name.get(d, d)} {n}人" for d, n in by_dept.most_common()
     )
     return [
         f"- 在职员工共 {len(emps)} 人",

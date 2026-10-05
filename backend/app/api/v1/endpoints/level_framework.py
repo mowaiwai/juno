@@ -3,7 +3,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import (
+    err,
+    get_current_user,
+    require_active_roles_user,
+)
 from app.database import get_db
 from app.models.user import Role, User
 from app.schemas.level_framework import (
@@ -22,7 +26,7 @@ from app.services.level_framework import (
 
 router = APIRouter(prefix="/level-framework", tags=["level-framework"])
 
-_admin = require_roles(Role.PLATFORM_ADMIN)
+_admin = require_active_roles_user(Role.PLATFORM_ADMIN)
 
 
 @router.get("/latest", response_model=FrameworkOut)

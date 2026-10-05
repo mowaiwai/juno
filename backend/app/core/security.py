@@ -18,11 +18,14 @@ def verify_password(password: str, hashed: str) -> bool:
 
 def create_access_token(user: User) -> str:
     now = datetime.now(timezone.utc)
+    refs = user.role_refs()
     payload = {
         "sub": str(user.id),
         "tenant_id": str(user.tenant_id),
-        "role": user.role.value,
-        "roles": sorted(r.value for r in user.role_set()),
+        # 默认激活角色引用（可能是自定义角色 custom:<uuid>）
+        "role": user.default_active_ref(),
+        # 全量角色引用：内置角色枚举值 + 自定义角色 custom:<uuid>
+        "roles": sorted(set(refs)),
         "iat": now,
         "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
     }

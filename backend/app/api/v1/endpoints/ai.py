@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, require_roles
+from app.core.deps import err, require_active_roles_user
 from app.database import get_db
 from app.models.ai import AISuggestion
 from app.models.application import Application
@@ -32,7 +32,7 @@ def get_ai_suggestion(
     application_id: uuid.UUID,
     response: Response,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.LEAD_REVIEWER)),
+    user: User = Depends(require_active_roles_user(Role.LEAD_REVIEWER)),
 ):
     """组长查看 AI 产出：pending → 202；completed/skipped/failed → 200；无记录 404。"""
     row = db.scalar(

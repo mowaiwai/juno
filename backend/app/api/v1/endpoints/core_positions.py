@@ -5,7 +5,13 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import (
+    Principal,
+    err,
+    get_principal,
+    require_perm_user,
+)
+from app.core.permissions import ScopeType
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.succession import (
@@ -15,7 +21,7 @@ from app.models.succession import (
     TalentPool,
     Willingness,
 )
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.succession import (
     CandidateIn,
     CandidateOut,
@@ -28,7 +34,7 @@ from app.schemas.succession import (
     WillingnessIn,
     WillingnessOut,
 )
-from app.services.profile import subordinate_ids
+from app.services.scope import apply_employee_scope
 from app.services.succession import (
     auto_screen,
     candidate_payload,
@@ -46,30 +52,27 @@ from app.services.succession import (
     update_position,
     leave_pool,
 )
+from sqlalchemy import select
 
 router = APIRouter(tags=["succession"])
 
-_hr = require_roles(Role.HR)
-_reader_roles = (Role.HR, Role.TENANT_ADMIN, Role.MANAGER)
+# 干部管理 COE：核心岗位/继任/梯队全量维护
+_hr = require_perm_user("succession.manage")
 
 
-def _require_reader(user: User):
-    if not user.has_any(*_reader_roles):
+def _require_reader(principal: Principal):
+    if not principal.can("succession.manage", "succession.nominate"):
         raise err(403, "forbidden", "无权查看核心岗位信息")
 
 
-def _manager_only(user: User) -> bool:
-    """用户是经理但没有更宽角色（HR/租户管理员）→ 需要按汇报链限制数据范围。"""
-    return user.has_any(Role.MANAGER) and not user.has_any(Role.HR, Role.TENANT_ADMIN)
+def _scoped(principal: Principal) -> bool:
+    """非 GLOBAL 数据范围（HRBP/部门领导）需要按范围收窄候选人明细。"""
+    return principal.scope_type != ScopeType.GLOBAL
 
 
-def _own_employee(db: Session, user: User) -> Employee | None:
-    return db.query(Employee).filter(Employee.user_id == user.id).first()
-
-
-def _manager_subordinates(db: Session, user: User) -> set:
-    own = _own_employee(db, user)
-    return subordinate_ids(db, own.id) if own else set()
+def _visible_employee_ids(db: Session, principal: Principal) -> set:
+    stmt = apply_employee_scope(select(Employee.id), db, principal)
+    return set(db.scalars(stmt).all())
 
 
 def _load(db: Session, position_id, user: User) -> CorePosition:
@@ -105,12 +108,13 @@ def create_position_endpoint(
 @router.get("/core-positions", response_model=list[CorePositionOut])
 def list_positions_endpoint(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    _require_reader(user)
+    _require_reader(principal)
+    user = principal.user
     views = [position_view(db, p) for p in list_positions(db, user.tenant_id)]
-    if _manager_only(user):
-        # 经理列表只看风险，不展开候选人明细（明细限汇报链）
+    if _scoped(principal):
+        # 范围受限角色列表只看风险，不展开候选人明细（明细限数据范围内）
         for view in views:
             view["candidates"] = []
     return views
@@ -120,13 +124,14 @@ def list_positions_endpoint(
 def detail_position_endpoint(
     position_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    _require_reader(user)
+    _require_reader(principal)
+    user = principal.user
     position = _load(db, position_id, user)
     view = position_view(db, position)
-    if _manager_only(user):
-        allowed = _manager_subordinates(db, user)
+    if _scoped(principal):
+        allowed = _visible_employee_ids(db, principal)
         view["candidates"] = [
             c for c in view["candidates"] if c["employee_id"] in allowed
         ]
@@ -185,13 +190,13 @@ def auto_screen_endpoint(
 def candidates_endpoint(
     position_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    _require_reader(user)
-    position = _load(db, position_id, user)
+    _require_reader(principal)
+    position = _load(db, position_id, principal.user)
     candidates = list_candidates(db, position)
-    if _manager_only(user):
-        allowed = _manager_subordinates(db, user)
+    if _scoped(principal):
+        allowed = _visible_employee_ids(db, principal)
         candidates = [c for c in candidates if c.employee_id in allowed]
     return [candidate_payload(db, c) for c in candidates]
 
@@ -267,7 +272,7 @@ def willingness_endpoint(
 @router.get("/talent-pools", response_model=list[TalentPoolOut])
 def list_pool_endpoint(
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR, Role.TENANT_ADMIN)),
+    user: User = Depends(require_perm_user("succession.manage")),
 ):
     return list_pools(db, user.tenant_id)
 

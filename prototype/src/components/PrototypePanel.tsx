@@ -4,7 +4,7 @@ import { AppstoreOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { pageRegistry } from '@/app/registry';
 import { useAuth } from '@/store/auth';
-import { ROLE_META } from '@/auth/rbac';
+import { resolveRoleMeta } from '@/auth/rbac';
 
 /** 隐藏式原型面板：页面地图 / 跳转任意页 / 重置剧本 */
 export function PrototypePanel() {
@@ -52,7 +52,7 @@ export function PrototypePanel() {
           <div>
             <div>原型面板</div>
             <div style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 400 }}>
-              {persona?.name} · {activeRole && ROLE_META[activeRole].label}视角 ·
+              {persona?.name} · {activeRole && resolveRoleMeta(activeRole, persona?.roleRefs).label}视角 ·
               全部数据为虚拟
             </div>
           </div>
@@ -119,7 +119,7 @@ export function PrototypePanel() {
               >
                 {pages.map((p) => {
                   const allowed = activeRole
-                    ? p.roles.includes(activeRole)
+                    ? p.roles.includes(activeRole as (typeof p.roles)[number])
                     : false;
                   return (
                     <button

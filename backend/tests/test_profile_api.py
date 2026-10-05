@@ -91,7 +91,7 @@ def test_latest_self_visible(client, db_session):
     assert resp.json()["version_seq"] == 1
 
 
-def test_latest_outside_scope_forbidden(client, db_session):
+def test_latest_outside_scope_not_found(client, db_session):
     # 由 HR 先给 junior 生成画像
     hr = login(client, "hr@xingye.test")
     junior_id = _get_employee_id(db_session, "junior@xingye.test")
@@ -101,12 +101,12 @@ def test_latest_outside_scope_forbidden(client, db_session):
         json={"employee_id": str(junior_id)},
     )
 
-    # 平级员工不可见
+    # 平级员工不可见：数据范围外统一 404（ADR-0014 不泄露存在性）
     token = login(client, "employee@xingye.test")
     resp = client.get(
         f"/api/v1/profiles/{junior_id}/latest", headers=auth_header(token)
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 def test_latest_manager_sees_subordinate(client, db_session):
@@ -123,13 +123,14 @@ def test_latest_manager_sees_subordinate(client, db_session):
     assert resp.status_code == 200
 
 
-def test_cross_tenant_forbidden(client, db_session):
+def test_cross_tenant_not_found(client, db_session):
     t2 = login(client, "employee@linyuan.test")
     t1_emp = _get_employee_id(db_session, "employee@xingye.test")
     resp = client.get(
         f"/api/v1/profiles/{t1_emp}/latest", headers=auth_header(t2)
     )
-    assert resp.status_code == 403
+    # 跨租户统一 404 口径
+    assert resp.status_code == 404
 
 
 def test_latest_not_found(client, db_session):

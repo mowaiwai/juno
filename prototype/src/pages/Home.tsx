@@ -23,10 +23,12 @@ export function Home() {
     return { done, total, pct: Math.round((done / total) * 100) };
   }, []);
 
-  const isHr = activeRole === 'hr';
+  // 全员目录：GLOBAL（COE/SSC/exec 等）或 ASSIGNED_DEPTS（HRBP，真实模式由服务端按授权部门过滤）
+  const canViewDirectory =
+    !!meta && (meta.scope === 'GLOBAL' || meta.scope === 'ASSIGNED_DEPTS');
 
   useEffect(() => {
-    if (!isHr) {
+    if (!canViewDirectory) {
       setEmployees(null);
       return;
     }
@@ -38,7 +40,7 @@ export function Home() {
         setEmployees([]);
         message.error(e instanceof ApiError ? e.message : '员工目录加载失败');
       });
-  }, [isHr]);
+  }, [canViewDirectory]);
 
   useEffect(() => {
     orgApi
@@ -87,7 +89,7 @@ export function Home() {
         <Card variant="borderless" style={{ background: 'var(--surface)' }}>
           <div style={{ color: 'var(--ink-3)', fontSize: 12 }}>可见员工数</div>
           <div className="num" style={{ fontSize: 30, fontWeight: 650 }}>
-            {isHr ? (employees?.length ?? '—') : 1}
+            {canViewDirectory ? (employees?.length ?? '—') : 1}
           </div>
         </Card>
         <Card variant="borderless" style={{ background: 'var(--surface)' }}>
@@ -147,19 +149,34 @@ export function Home() {
       </Can>
 
       <Can
-        roles={['hr']}
+        roles={['employee', 'manager', 'cert_panel']}
         fallback={
           <Card variant="borderless" style={{ background: 'var(--surface)' }}>
             <Alert
               type="info"
               showIcon
-              message="切换到 HR 视角可查看完整员工目录"
+              message="当前视角可查看员工目录（GLOBAL / 授权部门范围）"
             />
           </Card>
         }
       >
+        <Card variant="borderless" style={{ background: 'var(--surface)' }}>
+          <Alert
+            type="info"
+            showIcon
+            style={{
+              marginBottom: 0,
+              background: 'var(--surface)',
+              border: '1px solid var(--line)',
+            }}
+            message="员工/管理者/认证小组视角：数据范围以本人或关联对象为限；切换到 COE / HRBP / SSC 等视角可观察目录变化。"
+          />
+        </Card>
+      </Can>
+
+      {canViewDirectory && (
         <Card
-          title="员工目录 · 全租户"
+          title="员工目录 · 当前激活角色范围"
           variant="borderless"
           style={{ background: 'var(--surface)' }}
         >
@@ -194,7 +211,7 @@ export function Home() {
                   title: '绩效',
                   dataIndex: 'perf_grade',
                   render: (v: string | null) =>
-                    v ? (
+                    v && meta?.seePerf ? (
                       <Tag
                         style={{
                           borderRadius: 6,
@@ -217,7 +234,7 @@ export function Home() {
             />
           )}
         </Card>
-      </Can>
+      )}
     </div>
   );
 }

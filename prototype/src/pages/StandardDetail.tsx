@@ -19,7 +19,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { standards, swP3Standard } from '@/mock/standards';
 import { Can } from '@/components/Can';
 import { useAuth } from '@/store/auth';
-import { ROLE_META } from '@/auth/rbac';
+import { resolveRoleMeta } from '@/auth/rbac';
 import { USE_MOCK } from '@/api/config';
 import { ApiError } from '@/api/client';
 import { standardsApi, type StandardItemDTO, type StandardSetDTO } from '@/api/standards';
@@ -165,11 +165,11 @@ export function MockStandardDetail() {
               适用对象：{std.sequence} 序列 {std.grade} 及以上任职者
             </div>
           </div>
-          <Can roles={['committee', 'hr']}>
+          <Can roles={['committee', 'hr_coe_otd']}>
             <Space>
               {role && (
                 <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-                  {ROLE_META[role].label}可发起流转
+                  {resolveRoleMeta(role).label}可发起流转
                 </span>
               )}
               <Button onClick={() => message.info('原型演示：修订工作流见「版本与发布」页')}>
@@ -513,7 +513,7 @@ function RealStandardDetail() {
                   任职者 · 权重合计 {weightTotal}%
                 </div>
               </div>
-              {role === 'hr' && detail.status === 'draft' && (
+              {role === 'hr_coe_otd' && detail.status === 'draft' && (
                 <Button
                   type="primary"
                   loading={publishing}

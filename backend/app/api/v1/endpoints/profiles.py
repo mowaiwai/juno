@@ -5,12 +5,18 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import (
+    Principal,
+    err,
+    get_current_user,
+    get_principal,
+    require_perm_user,
+)
 from app.database import get_db
 from app.framework_content import EDUCATION_OPTIONS
 from app.models.employee import Employee
 from app.models.profile import ProfileSnapshot
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.profile import (
     BasicIn,
     BasicOut,
@@ -31,19 +37,23 @@ from app.services.profile import (
 
 router = APIRouter(tags=["profiles"])
 
-_hr = require_roles(Role.HR)
+# 画像生成：COE·组织与人才发展（profile.generate）
+_generate = require_perm_user("profile.generate")
+# 学历/证书等基本条件补录：employee.field.basic.edit
+_basic_edit = require_perm_user("employee.field.basic.edit")
 
 
-def _require_view(db: Session, user: User, employee_id) -> None:
-    if not can_view_profile(db, user, employee_id):
-        raise err(403, "forbidden", "无权查看该员工画像")
+def _require_view(db: Session, principal: Principal, employee_id) -> None:
+    if not can_view_profile(db, principal, employee_id):
+        # 范围外员工统一 404 口径，不暴露存在性
+        raise err(404, "employee_not_found", "员工不存在")
 
 
 @router.post("/profiles/generate", status_code=201)
 def generate_endpoint(
     body: GenerateIn,
     db: Session = Depends(get_db),
-    user: User = Depends(_hr),
+    user: User = Depends(_generate),
 ):
     if body.scope == "all":
         snapshots = generate_all(db, user.tenant_id, user)
@@ -97,9 +107,9 @@ def regenerate_me_endpoint(
 def latest_endpoint(
     employee_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    _require_view(db, user, employee_id)
+    _require_view(db, principal, employee_id)
     snapshot = latest_profile(db, employee_id)
     if snapshot is None:
         raise err(404, "profile_not_found", "该员工暂无画像")
@@ -111,9 +121,9 @@ def latest_endpoint(
 def versions_endpoint(
     employee_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    _require_view(db, user, employee_id)
+    _require_view(db, principal, employee_id)
     return profile_versions(db, employee_id)
 
 
@@ -123,9 +133,9 @@ def version_detail_endpoint(
     employee_id: uuid.UUID,
     version_seq: int,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    _require_view(db, user, employee_id)
+    _require_view(db, principal, employee_id)
     snapshot = get_version(db, employee_id, version_seq)
     if snapshot is None:
         raise err(404, "profile_not_found", "该版本画像不存在")
@@ -137,7 +147,7 @@ def update_basic_endpoint(
     employee_id: uuid.UUID,
     body: BasicIn,
     db: Session = Depends(get_db),
-    user: User = Depends(_hr),
+    user: User = Depends(_basic_edit),
 ):
     if body.education not in EDUCATION_OPTIONS or body.education == "不限":
         raise err(

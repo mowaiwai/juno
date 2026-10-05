@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err
+from app.core.deps import Principal, err
 from app.framework_content import EDUCATION_OPTIONS
 from app.models.application import (
     Application,
@@ -23,9 +23,10 @@ from app.models.profile import (
     ProfileSnapshot,
     ProfileSource,
 )
-from app.models.user import Role, User
+from app.models.user import User
 from app.services.audit import audit_as
 from app.services.level_framework import resolve_for_tenant
+from app.services.scope import can_access_employee
 
 _SELF_LEVEL_VALUES = {"met": 1.0, "partially_met": 0.5, "not_met": 0.0}
 
@@ -301,22 +302,16 @@ def subordinate_ids(db: Session, employee_id) -> set:
     return result
 
 
-def _employee_of_user(db: Session, user: User) -> Employee | None:
-    return db.scalar(
-        select(Employee).where(Employee.user_id == user.id)
-    )
-
-
-def can_view_profile(db: Session, user: User, employee_id) -> bool:
-    if user.has_any(Role.HR, Role.TENANT_ADMIN):
-        employee = db.get(Employee, employee_id)
-        return employee is not None and employee.tenant_id == user.tenant_id
-    own = _employee_of_user(db, user)
-    if own is None:
+def can_view_profile(db: Session, principal: Principal, employee_id) -> bool:
+    """画像可见 = 持有 profile.view 且员工落在激活角色数据范围内；本人始终可见。"""
+    employee = db.get(Employee, employee_id)
+    if employee is None or employee.tenant_id != principal.user.tenant_id:
         return False
-    if own.id == employee_id:
+    if employee.user_id == principal.user.id:
         return True
-    return employee_id in subordinate_ids(db, own.id)
+    if not principal.can("profile.view"):
+        return False
+    return can_access_employee(db, principal, employee)
 
 
 # ---------------------------------------------------------------------------

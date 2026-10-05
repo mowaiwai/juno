@@ -21,6 +21,9 @@ class AuditLog(Base):
     # evidence.upload / ai.generate
     action: Mapped[str] = mapped_column(String(64), index=True)
     entity_type: Mapped[str] = mapped_column(String(64))
-    entity_id: Mapped[uuid.UUID] = mapped_column(Uuid, index=True)
+    # 批量动作（如 gaps_analyzed、role_granted）无单一实体，可空（ADR-0014）
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, index=True, nullable=True
+    )
     before: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     after: Mapped[dict | None] = mapped_column(JSON, nullable=True)

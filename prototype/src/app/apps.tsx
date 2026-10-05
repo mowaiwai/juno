@@ -3,6 +3,7 @@ import { Empty, Tabs } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/store/auth';
 import { getPage } from '@/app/registry';
+import type { RoleCode } from '@/types';
 
 // 数据中枢页面
 import { StandardsList } from '@/pages/StandardsList';
@@ -35,6 +36,7 @@ import { KnowledgeBase } from '@/pages/KnowledgeBase';
 import { PerfImport } from '@/pages/PerfImport';
 import { ImprovementBoard } from '@/pages/ImprovementBoard';
 import { Coaching } from '@/pages/Coaching';
+import { MyPerf } from '@/pages/MyPerf';
 import { RecruitBoard } from '@/pages/RecruitBoard';
 import { InterviewBank } from '@/pages/InterviewBank';
 import { GapBoard } from '@/pages/GapBoard';
@@ -179,9 +181,10 @@ export const APP_PERF: AppDef = {
   title: '绩效管理改进',
   wheel: '消费：绩效管理标准库 · 员工画像库 → 反哺：员工画像库 · 关键指标看板',
   tabs: [
-    { key: 'import', label: '绩效导入', pageKey: 'perf-import', component: PerfImport },
+    { key: 'import', label: '考核方案', pageKey: 'perf-import', component: PerfImport },
     { key: 'board', label: '改进看板', pageKey: 'improvement-board', component: ImprovementBoard },
     { key: 'coaching', label: '辅导回看', pageKey: 'coaching', component: Coaching },
+    { key: 'my-perf', label: '我的绩效', pageKey: 'my-perf', component: MyPerf },
   ],
 };
 
@@ -287,7 +290,7 @@ export function AppContainer({ def }: { def: AppDef }) {
     () =>
       def.tabs.filter((t) => {
         const meta = getPage(t.pageKey);
-        return !!meta && !!activeRole && meta.roles.includes(activeRole);
+        return !!meta && !!activeRole && meta.roles.includes(activeRole as RoleCode);
       }),
     [def, activeRole],
   );

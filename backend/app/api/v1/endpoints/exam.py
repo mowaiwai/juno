@@ -4,10 +4,16 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import (
+    Principal,
+    err,
+    get_current_user,
+    get_principal,
+    require_perm_user,
+)
 from app.database import get_db
 from app.models.exam import AttemptStatus, ExamPaper
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.exam import (
     AttemptOut,
     GeneratePaperIn,
@@ -23,7 +29,13 @@ from app.services import exam
 
 router = APIRouter(prefix="/exam", tags=["exam"])
 
-_hr = require_roles(Role.HR)
+# 题库/试卷管理（含 AI 组卷与审核）：COE·组织与人才发展
+_paper_admin = require_perm_user("exam.paper.manage")
+
+
+def _is_exam_staff(principal: Principal) -> bool:
+    """题库管理或考试运营角色可见未发布试卷/答案与全员成绩。"""
+    return principal.can("exam.paper.manage", "exam.operate")
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +121,7 @@ def _attempt_out(attempt, *, paper_title: str, include_detail, paper_questions=N
 def generate_endpoint(
     body: GeneratePaperIn,
     db: Session = Depends(get_db),
-    user: User = Depends(_hr),
+    user: User = Depends(_paper_admin),
 ):
     try:
         paper = exam.generate_paper(db, user, body)
@@ -133,7 +145,7 @@ def generate_endpoint(
 def approve_endpoint(
     paper_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(_hr),
+    user: User = Depends(_paper_admin),
 ):
     paper = db.get(ExamPaper, paper_id)
     if paper is None or paper.tenant_id != user.tenant_id:
@@ -151,7 +163,7 @@ def reject_endpoint(
     paper_id: uuid.UUID,
     body: RejectIn,
     db: Session = Depends(get_db),
-    user: User = Depends(_hr),
+    user: User = Depends(_paper_admin),
 ):
     paper = db.get(ExamPaper, paper_id)
     if paper is None or paper.tenant_id != user.tenant_id:
@@ -171,23 +183,30 @@ def reject_endpoint(
 @router.get("/papers", response_model=list[PaperOut])
 def list_papers_endpoint(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    return [_paper_out(p, include_questions=False) for p in exam.list_papers(db, user)]
+    return [
+        _paper_out(p, include_questions=False)
+        for p in exam.list_papers(
+            db, principal.user, include_unpublished=_is_exam_staff(principal)
+        )
+    ]
 
 
 @router.get("/papers/{paper_id}", response_model=PaperOut)
 def get_paper_endpoint(
     paper_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    paper = exam.get_paper_for_user(db, paper_id, user)
+    staff = _is_exam_staff(principal)
+    paper = exam.get_paper_for_user(
+        db, paper_id, principal.user, include_unpublished=staff
+    )
     if paper is None:
         raise err(404, "paper_not_found", "试卷不存在或不可见")
-    # HR 详情含题目与答案；考生不在此看答案（走 start/attempt 流程）
-    include = user.has_any(Role.HR, Role.TENANT_ADMIN)
-    return _paper_out(paper, include_questions=include)
+    # 考试运营/题库管理详情含题目与答案；考生不在此看答案（走 start/attempt 流程）
+    return _paper_out(paper, include_questions=staff)
 
 
 # ---------------------------------------------------------------------------
@@ -279,9 +298,12 @@ def list_attempts_endpoint(
 def get_attempt_endpoint(
     attempt_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    attempt = exam.get_owned_attempt(db, attempt_id, user)
+    user = principal.user
+    attempt = exam.get_owned_attempt(
+        db, attempt_id, user, is_admin=_is_exam_staff(principal)
+    )
     if attempt is None:
         raise err(404, "attempt_not_found", "考试记录不存在或无权访问")
     paper = db.get(ExamPaper, attempt.paper_id)

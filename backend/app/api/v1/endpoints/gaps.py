@@ -11,12 +11,17 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import (
+    Principal,
+    err,
+    get_current_user,
+    get_principal,
+)
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.gap import Gap, GapAction, GapDimension, GapSeverity
 from app.models.profile import ProfileSnapshot
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.gap import (
     GapActionIn,
     GapActionOut,
@@ -25,6 +30,7 @@ from app.schemas.gap import (
     TeamGapOut,
 )
 from app.services.audit import audit_as
+from app.services.scope import apply_employee_scope, can_access_employee
 
 router = APIRouter(tags=["gap"])
 
@@ -87,20 +93,23 @@ def _latest_snapshot(
 def analyze_gaps(
     body: GapAnalyzeIn,
     db: Session = Depends(get_db),
-    user: User = Depends(
-        require_roles(Role.HR, Role.MANAGER, Role.TENANT_ADMIN)
-    ),
+    principal: Principal = Depends(get_principal),
 ):
     """差距分析：基于画像七维 + 绩效等级识别员工-岗位差距。
 
     每次分析会先清理这些员工的历史差距记录，再写入新结果。
+    需 gap.manage 权限；员工范围按激活角色数据范围收窄。
     """
+    if not principal.can("gap.manage"):
+        raise err(403, "forbidden", "当前角色无权运行差距分析")
+    user = principal.user
     emp_stmt = select(Employee).where(
         Employee.tenant_id == user.tenant_id,
         Employee.is_active.is_(True),
     )
     if body.dept_id:
         emp_stmt = emp_stmt.where(Employee.dept_id == body.dept_id)
+    emp_stmt = apply_employee_scope(emp_stmt, db, principal)
     employees = db.scalars(emp_stmt).all()
     if not employees:
         return []
@@ -192,9 +201,12 @@ def list_gaps(
     dept_id: str | None = None,
     dimension: str | None = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    """差距清单：可按部门 / 维度过滤。"""
+    """差距清单：可按部门 / 维度过滤；按激活角色数据范围收窄。"""
+    if not principal.can("gap.manage"):
+        raise err(403, "forbidden", "当前角色无权查看差距清单")
+    user = principal.user
     dim_filter: GapDimension | None = None
     if dimension:
         try:
@@ -202,7 +214,17 @@ def list_gaps(
         except ValueError:
             raise err(400, "invalid_dimension", "维度参数无效")
 
-    stmt = select(Gap).where(Gap.tenant_id == user.tenant_id)
+    visible = set(
+        db.scalars(
+            apply_employee_scope(select(Employee.id), db, principal)
+        ).all()
+    )
+    if not visible:
+        return []
+    stmt = (
+        select(Gap)
+        .where(Gap.tenant_id == user.tenant_id, Gap.employee_id.in_(visible))
+    )
     if dept_id:
         stmt = stmt.join(Employee, Gap.employee_id == Employee.id).where(
             Employee.dept_id == dept_id
@@ -239,15 +261,19 @@ def list_my_gaps(
 def team_gaps(
     dept_id: str | None = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    """团队差距看板：按员工聚合差距。"""
+    """团队差距看板：按员工聚合差距，按激活角色数据范围收窄。"""
+    if not principal.can("gap.manage"):
+        raise err(403, "forbidden", "当前角色无权查看团队差距")
+    user = principal.user
     emp_stmt = select(Employee).where(
         Employee.tenant_id == user.tenant_id,
         Employee.is_active.is_(True),
     )
     if dept_id:
         emp_stmt = emp_stmt.where(Employee.dept_id == dept_id)
+    emp_stmt = apply_employee_scope(emp_stmt, db, principal)
     employees = db.scalars(emp_stmt).all()
     if not employees:
         return []
@@ -301,11 +327,12 @@ def team_gaps(
 def generate_actions(
     body: GapActionIn,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    """根据差距生成改进动作建议。"""
+    """根据差距生成改进动作建议；仅限本人或数据范围内的差距。"""
     if not body.gap_ids:
         return []
+    user = principal.user
 
     gaps = db.scalars(
         select(Gap).where(
@@ -313,10 +340,16 @@ def generate_actions(
             Gap.id.in_(body.gap_ids),
         )
     ).all()
-    found_ids = {g.id for g in gaps}
+    allowed: list[Gap] = []
+    for g in gaps:
+        emp = db.get(Employee, g.employee_id)
+        if emp is not None and can_access_employee(db, principal, emp):
+            allowed.append(g)
+    found_ids = {g.id for g in allowed}
     missing = set(body.gap_ids) - found_ids
     if missing:
         raise err(404, "gap_not_found", f"差距记录不存在: {missing}")
+    gaps = allowed
 
     rows: list[GapActionOut] = []
     for g in gaps:

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, require_roles
+from app.core.deps import err, require_active_roles_user
 from app.database import get_db
 from app.models.application import (
     Application,
@@ -40,9 +40,10 @@ class ManagerReviewIn(BaseModel):
 
 
 def _manager_employee(db: Session, user: User) -> Employee:
+    # 端点守卫已确保激活角色为部门领导（或通配管理员）
     employee = db.scalar(select(Employee).where(Employee.user_id == user.id))
-    if employee is None or not user.has_any(Role.MANAGER):
-        raise err(403, "forbidden", "仅部门经理可执行此操作")
+    if employee is None:
+        raise err(403, "forbidden", "当前账号缺少员工档案，无法以经理身份操作")
     return employee
 
 
@@ -50,7 +51,7 @@ def _manager_employee(db: Session, user: User) -> Employee:
 def list_for_manager(
     status: ApplicationStatus = ApplicationStatus.SUBMITTED,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.MANAGER)),
+    user: User = Depends(require_active_roles_user(Role.MANAGER)),
 ):
     """我名下处于某状态（默认待初审）的申请。"""
     manager = _manager_employee(db, user)
@@ -86,7 +87,7 @@ def submit_manager_review(
     body: ManagerReviewIn,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.MANAGER)),
+    user: User = Depends(require_active_roles_user(Role.MANAGER)),
 ):
     """经理初审：原子完成"领取 + 决策"。初审经理唯一，无评审竞争。"""
     manager = _manager_employee(db, user)

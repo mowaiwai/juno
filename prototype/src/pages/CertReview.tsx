@@ -40,7 +40,8 @@ import { ApplicationMaterial } from '@/components/ApplicationMaterial';
 function MockCertReview() {
   const activeRole = useAuth((s) => s.activeRole);
   const scope = useDataScope();
-  const isHr = activeRole === 'hr';
+  // 管理者：本部门预审队列；认证小组/管委会/租户管理员：全量在途与发布视角
+  const isHr = activeRole !== 'manager';
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -76,7 +77,7 @@ function MockCertReview() {
           <h1 className="page-title font-serif">认证审核台</h1>
           <div className="page-subtitle">
             {isHr
-              ? 'HR 视角：全公司在途认证总表与管道健康度'
+              ? '认证小组/管委会视角：全公司在途认证总表与管道健康度'
               : '部门经理视角：本部门举证材料预审（P2→P3 路由的初审环节）'}
           </div>
         </div>
@@ -649,13 +650,20 @@ function HrReviewPage() {
 // ============ 入口：按角色分支 ============
 
 function RealCertReview() {
-  const persona = useAuth((s) => s.persona);
-  if (persona?.defaultRole === 'manager') return <ManagerReviewPage />;
-  if (persona?.defaultRole === 'hr') return <HrReviewPage />;
+  const activeRole = useAuth((s) => s.activeRole);
+  if (activeRole === 'manager') return <ManagerReviewPage />;
+  // cert_panel / committee / tenant_admin 使用全量审核视角（含发布动作）
+  if (
+    activeRole === 'cert_panel' ||
+    activeRole === 'committee' ||
+    activeRole === 'tenant_admin'
+  ) {
+    return <HrReviewPage />;
+  }
   return (
     <div className="page" style={{ maxWidth: 720 }}>
       <Card variant="borderless" style={{ background: 'var(--surface)' }}>
-        <Empty description="当前角色无认证审核权限（仅部门经理与 HR 可访问）" />
+        <Empty description="当前角色无认证审核权限（仅部门经理、认证小组与管委会可访问）" />
       </Card>
     </div>
   );

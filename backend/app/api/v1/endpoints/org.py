@@ -1,50 +1,27 @@
-"""组织基础数据端点：部门、岗位编制、职级通道、族标签。
+"""组织基础数据端点：部门主数据、岗位编制、职级通道、族标签、薪级带宽。
 
-部门与岗位编制为静态主数据（MVP 不建主数据表，dept_id 沿用字符串）。
-在编人数（onDuty）与部门负责人从 Employee 表实时聚合。
-职级通道为制度级静态配置。
+部门树为真实主数据（departments 表，ADR-0014），OTD 维护、领导变更自动授角；
+岗位编制仍为静态主数据，在编人数从 Employee 表实时聚合；
+职级通道为制度级静态配置，薪级带宽支持租户覆盖（薪酬激励角色维护）。
 """
 
 import uuid
 from collections import Counter
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user
+from app.core.deps import Principal, err, get_current_user, require_perm
 from app.database import get_db
 from app.models.employee import Employee
+from app.models.org import Department
 from app.models.user import User
+from app.services.audit import audit_as
+from app.services.org_service import set_department_leader
 
 router = APIRouter(prefix="/org", tags=["org"])
-
-# ---------------------------------------------------------------------------
-# 静态主数据
-# ---------------------------------------------------------------------------
-
-DEPARTMENTS = [
-    {"id": "100", "parent_id": "0", "name": "星野制造", "type": "biz", "manager_no": None},
-    {"id": "200", "parent_id": "100", "name": "职能中心", "type": "func", "manager_no": None},
-    {"id": "201", "parent_id": "200", "name": "人力资源部", "type": "func", "manager_no": "E10002"},
-    {"id": "202", "parent_id": "200", "name": "财务部", "type": "func", "manager_no": None},
-    {"id": "203", "parent_id": "200", "name": "综合管理部", "type": "func", "manager_no": None},
-    {"id": "300", "parent_id": "100", "name": "研发中心", "type": "tech", "manager_no": None},
-    {"id": "305", "parent_id": "300", "name": "软件研发部", "type": "tech", "manager_no": "E10020"},
-    {"id": "306", "parent_id": "300", "name": "机械设计部", "type": "tech", "manager_no": None},
-    {"id": "307", "parent_id": "300", "name": "工艺工程部", "type": "tech", "manager_no": None},
-    {"id": "400", "parent_id": "100", "name": "制造中心", "type": "biz", "manager_no": None},
-    {"id": "401", "parent_id": "400", "name": "机加车间", "type": "biz", "manager_no": None},
-    {"id": "402", "parent_id": "400", "name": "装配车间", "type": "biz", "manager_no": None},
-    {"id": "403", "parent_id": "400", "name": "质量部", "type": "tech", "manager_no": None},
-    {"id": "500", "parent_id": "100", "name": "供应链中心", "type": "func", "manager_no": None},
-    {"id": "501", "parent_id": "500", "name": "采购部", "type": "func", "manager_no": None},
-    {"id": "502", "parent_id": "500", "name": "仓储物流部", "type": "func", "manager_no": None},
-    {"id": "600", "parent_id": "100", "name": "营销中心", "type": "biz", "manager_no": None},
-    {"id": "601", "parent_id": "600", "name": "销售部", "type": "biz", "manager_no": None},
-    {"id": "602", "parent_id": "600", "name": "市场部", "type": "biz", "manager_no": None},
-]
 
 POSITIONS = [
     {"id": "p001", "name": "首席执行官", "dept_id": "100", "family": "M", "sequence": "MGT", "grade": "M5", "is_core": True, "headcount": 1},
@@ -80,6 +57,10 @@ FAMILY_LABEL = {
     "O": "职能族",
     "S": "销售族",
 }
+
+# ---------------------------------------------------------------------------
+# 职级通道（制度级静态主数据）
+# ---------------------------------------------------------------------------
 
 CHANNELS = [
     {
@@ -148,6 +129,11 @@ CHANNELS = [
     },
 ]
 
+DEFAULT_BANDS: dict[str, list[int]] = {
+    g["grade"]: g["salary_band"]
+    for c in CHANNELS
+    for g in c["grades"]
+}
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -155,11 +141,26 @@ CHANNELS = [
 
 class DepartmentOut(BaseModel):
     id: str
-    parent_id: str
+    parent_id: str | None
     name: str
     type: str
-    manager_id: uuid.UUID | None = None
-    manager_name: str | None = None
+    leader_id: uuid.UUID | None = None
+    leader_name: str | None = None
+
+
+class DepartmentIn(BaseModel):
+    id: str
+    name: str
+    parent_id: str | None = None
+    type: str = "func"
+    leader_id: uuid.UUID | None = None
+
+
+class DepartmentUpdate(BaseModel):
+    name: str | None = None
+    parent_id: str | None = None
+    type: str | None = None
+    leader_id: uuid.UUID | None = None
 
 
 class GradeBandOut(BaseModel):
@@ -192,7 +193,7 @@ class PositionOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# 端点
+# 部门
 # ---------------------------------------------------------------------------
 
 @router.get("/departments", response_model=list[DepartmentOut])
@@ -200,31 +201,122 @@ def list_departments(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """部门列表（含负责人）。manager 从 Employee 表按 employee_no 查。"""
-    manager_nos = {d["manager_no"] for d in DEPARTMENTS if d["manager_no"]}
-    mgr_map: dict[str, Employee] = {}
-    if manager_nos:
-        rows = db.scalars(
-            select(Employee).where(
-                Employee.tenant_id == user.tenant_id,
-                Employee.employee_no.in_(manager_nos),
+    """部门树（含负责人），全员可查。"""
+    rows = db.scalars(
+        select(Department)
+        .where(Department.tenant_id == user.tenant_id)
+        .order_by(Department.id)
+    ).all()
+    leader_ids = {d.leader_employee_id for d in rows if d.leader_employee_id}
+    mgr_map: dict[uuid.UUID, Employee] = {}
+    if leader_ids:
+        mgr_map = {
+            e.id: e
+            for e in db.scalars(
+                select(Employee).where(Employee.id.in_(leader_ids))
+            ).all()
+        }
+    return [
+        DepartmentOut(
+            id=d.id,
+            parent_id=d.parent_id,
+            name=d.name,
+            type=d.type,
+            leader_id=d.leader_employee_id,
+            leader_name=(mgr_map[d.leader_employee_id].name
+                         if d.leader_employee_id in mgr_map else None),
+        )
+        for d in rows
+    ]
+
+
+@router.post("/departments", response_model=DepartmentOut, status_code=201)
+def create_department(
+    body: DepartmentIn,
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(require_perm("org.dept.manage")),
+):
+    exists = db.scalar(
+        select(Department.id).where(
+            Department.tenant_id == principal.user.tenant_id,
+            Department.id == body.id,
+        )
+    )
+    if exists is not None:
+        raise err(409, "dept_exists", "部门编码已存在")
+    dept = Department(
+        id=body.id,
+        tenant_id=principal.user.tenant_id,
+        name=body.name,
+        parent_id=body.parent_id,
+        type=body.type,
+    )
+    db.add(dept)
+    db.flush()
+    if body.leader_id:
+        try:
+            set_department_leader(
+                db, principal.user.tenant_id, body.id, body.leader_id
             )
-        ).all()
-        mgr_map = {r.employee_no: r for r in rows}
+        except ValueError as exc:
+            raise err(404, str(exc), "负责人不存在")
+    audit_as(db, principal.user, "department_created", "org", None,
+             after={"id": body.id, "name": body.name})
+    db.commit()
+    return _dept_out(db, dept)
 
-    result = []
-    for d in DEPARTMENTS:
-        mgr = mgr_map.get(d["manager_no"]) if d["manager_no"] else None
-        result.append(DepartmentOut(
-            id=d["id"],
-            parent_id=d["parent_id"],
-            name=d["name"],
-            type=d["type"],
-            manager_id=mgr.id if mgr else None,
-            manager_name=mgr.name if mgr else None,
-        ))
-    return result
 
+@router.put("/departments/{dept_id}", response_model=DepartmentOut)
+def update_department(
+    dept_id: str,
+    body: DepartmentUpdate,
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(require_perm("org.dept.manage")),
+):
+    dept = db.scalar(
+        select(Department).where(
+            Department.tenant_id == principal.user.tenant_id,
+            Department.id == dept_id,
+        )
+    )
+    if dept is None:
+        raise err(404, "dept_not_found", "部门不存在")
+    if body.name is not None:
+        dept.name = body.name
+    if body.type is not None:
+        dept.type = body.type
+    if body.parent_id is not None and body.parent_id != dept.parent_id:
+        if body.parent_id == dept_id:
+            raise err(422, "invalid_parent", "上级部门不能是自身")
+        dept.parent_id = body.parent_id
+    if "leader_id" in body.model_fields_set:
+        try:
+            set_department_leader(
+                db, principal.user.tenant_id, dept_id, body.leader_id
+            )
+        except ValueError as exc:
+            raise err(404, str(exc), "负责人不存在")
+    audit_as(db, principal.user, "department_updated", "org", None,
+             after={"id": dept_id})
+    db.commit()
+    return _dept_out(db, dept)
+
+
+def _dept_out(db: Session, dept: Department) -> DepartmentOut:
+    leader = db.get(Employee, dept.leader_employee_id) if dept.leader_employee_id else None
+    return DepartmentOut(
+        id=dept.id,
+        parent_id=dept.parent_id,
+        name=dept.name,
+        type=dept.type,
+        leader_id=dept.leader_employee_id,
+        leader_name=leader.name if leader else None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 岗位编制（静态）
+# ---------------------------------------------------------------------------
 
 @router.get("/positions", response_model=list[PositionOut])
 def list_positions(
@@ -242,9 +334,8 @@ def list_positions(
     for e in rows:
         counter[(e.dept_id, e.position)] += 1
 
-    result = []
-    for p in POSITIONS:
-        result.append(PositionOut(
+    return [
+        PositionOut(
             id=p["id"],
             name=p["name"],
             dept_id=p["dept_id"],
@@ -254,9 +345,14 @@ def list_positions(
             is_core=p["is_core"],
             headcount=p["headcount"],
             on_duty=counter.get((p["dept_id"], p["name"]), 0),
-        ))
-    return result
+        )
+        for p in POSITIONS
+    ]
 
+
+# ---------------------------------------------------------------------------
+# 职级通道（制度级静态数据）
+# ---------------------------------------------------------------------------
 
 @router.get("/channels", response_model=list[ChannelFamilyOut])
 def list_channels(

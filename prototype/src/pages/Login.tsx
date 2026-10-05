@@ -4,7 +4,7 @@ import { Alert, Button, Divider, Form, Input, Tag } from 'antd';
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
 import { personas } from '@/mock/people';
 import { useAuth } from '@/store/auth';
-import { ROLE_META } from '@/auth/rbac';
+import { resolveRoleMeta } from '@/auth/rbac';
 import { USE_MOCK } from '@/api/config';
 import { ApiError } from '@/api/client';
 
@@ -13,7 +13,7 @@ const TEST_ACCOUNTS: Array<[string, string]> = [
   ['manager@juno.test', '部门经理（初审）'],
   ['rev1@juno.test', '认证小组评委'],
   ['lead@juno.test', '评审组长（终裁）'],
-  ['hr@juno.test', 'HR（发布）'],
+  ['hr@juno.test', 'HRD（COE/HRBP/SSC 七角色）'],
 ];
 
 export function Login() {
@@ -190,7 +190,7 @@ export function Login() {
                           color: 'var(--ink-2)',
                         }}
                       >
-                        {ROLE_META[r].label}
+                        {resolveRoleMeta(r, p.roleRefs).label}
                       </Tag>
                     ))}
                     {p.roles.length > 1 && (

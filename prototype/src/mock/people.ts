@@ -1,4 +1,31 @@
-import type { Employee, Persona } from '@/types';
+import type { Employee, Persona, RoleCode, RoleRef } from '@/types';
+
+// mock 角色引用视图（与 /me.role_refs 同构）。此处内联以避免与 auth/rbac 循环依赖。
+const MOCK_ROLE_VIEW: Record<string, { label: string; scope_type: string }> = {
+  employee: { label: '员工', scope_type: 'self' },
+  manager: { label: '管理者', scope_type: 'subtree' },
+  cert_panel: { label: '认证小组', scope_type: 'assigned_depts' },
+  committee: { label: '管委会', scope_type: 'global' },
+  exec: { label: '高管', scope_type: 'global' },
+  tenant_admin: { label: '租户管理员', scope_type: 'global' },
+  platform_admin: { label: '平台管理员', scope_type: 'global' },
+  hr_coe_cadre: { label: 'COE·干部管理', scope_type: 'global' },
+  hr_coe_perf: { label: 'COE·绩效', scope_type: 'global' },
+  hr_coe_comp: { label: 'COE·薪酬激励', scope_type: 'global' },
+  hr_coe_recruit: { label: 'COE·招聘运营', scope_type: 'global' },
+  hr_coe_otd: { label: 'COE·组织与人才发展', scope_type: 'global' },
+  hrbp: { label: 'HRBP（业务伙伴）', scope_type: 'assigned_depts' },
+  ssc: { label: 'SSC（共享服务）', scope_type: 'global' },
+};
+
+function roleRefsOf(roles: RoleCode[]): RoleRef[] {
+  return roles.map((ref) => ({
+    ref: ref as string,
+    label: MOCK_ROLE_VIEW[ref as string]?.label ?? (ref as string),
+    scope_type: MOCK_ROLE_VIEW[ref as string]?.scope_type ?? 'assigned_depts',
+  }));
+}
+
 
 export const employees: Employee[] = [
   // ---- 高管 / 中心负责人 ----
@@ -64,6 +91,7 @@ export const personas: Persona[] = [
     name: '许星遥',
     title: '软件工程师 · P3',
     roles: ['employee'],
+    roleRefs: roleRefsOf(['employee']),
     defaultRole: 'employee',
     tenantId: 't_huali',
     tenantName: '华砺精工',
@@ -75,21 +103,42 @@ export const personas: Persona[] = [
     name: '陆行舟',
     title: '软件研发经理 · M2',
     roles: ['manager', 'cert_panel'],
+    roleRefs: roleRefsOf(['manager', 'cert_panel']),
     defaultRole: 'manager',
     tenantId: 't_huali',
     tenantName: '华砺精工',
     blurb: '带 20 人研发团队，负责审批与认证小组评审',
   },
   {
+    // 温晚晴：HRD，持有 RBAC 三支柱全部 7 个 HR 角色 + 管委会，默认 OTD 视角
     id: 'zhou',
     employeeId: 'E10002',
     name: '温晚晴',
     title: 'HRD · M3',
-    roles: ['hr', 'committee'],
-    defaultRole: 'hr',
+    roles: [
+      'hr_coe_cadre',
+      'hr_coe_perf',
+      'hr_coe_comp',
+      'hr_coe_recruit',
+      'hr_coe_otd',
+      'hrbp',
+      'ssc',
+      'committee',
+    ],
+    roleRefs: roleRefsOf([
+      'hr_coe_cadre',
+      'hr_coe_perf',
+      'hr_coe_comp',
+      'hr_coe_recruit',
+      'hr_coe_otd',
+      'hrbp',
+      'ssc',
+      'committee',
+    ]),
+    defaultRole: 'hr_coe_otd',
     tenantId: 't_huali',
     tenantName: '华砺精工',
-    blurb: '运营标准、盘点与调薪，管委会终审成员',
+    blurb: '三支柱角色齐备：COE 干部/绩效/薪酬/招聘/组织发展、HRBP、SSC，兼管委会终审',
   },
   {
     id: 'zhang',
@@ -97,10 +146,11 @@ export const personas: Persona[] = [
     name: '沈既明',
     title: '首席执行官',
     roles: ['exec'],
+    roleRefs: roleRefsOf(['exec']),
     defaultRole: 'exec',
     tenantId: 't_huali',
     tenantName: '华砺精工',
-    blurb: '看三张图做人才决策，审批调薪与盘点',
+    blurb: '看三张图做人才决策，审批调薪与盘点（薪酬明文掩码）',
   },
   {
     id: 'chen',
@@ -108,16 +158,18 @@ export const personas: Persona[] = [
     name: '顾知夏',
     title: '租户管理员 · IT',
     roles: ['tenant_admin'],
+    roleRefs: roleRefsOf(['tenant_admin']),
     defaultRole: 'tenant_admin',
     tenantId: 't_huali',
     tenantName: '华砺精工',
-    blurb: '管理配置中心、模板与用量，维护本租户',
+    blurb: '管理角色与权限、配置中心、模板与用量，维护本租户',
   },
   {
     id: 'platform',
     name: '程亦',
     title: '平台管理员',
     roles: ['platform_admin'],
+    roleRefs: roleRefsOf(['platform_admin']),
     defaultRole: 'platform_admin',
     tenantId: 'platform',
     tenantName: 'SaaS 平台运营',

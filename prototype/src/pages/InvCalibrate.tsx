@@ -12,6 +12,9 @@ import { ApiError } from '@/api/client';
 
 const DIM_ORDER = ['basic', 'biz', 'contribution', 'duty', 'knowledge', 'ability', 'perf'];
 
+/** 可主导校准的 HR COE 角色：干部管理 / 绩效 / 组织与人才发展 */
+const CALIBRATE_ROLES = ['hr_coe_cadre', 'hr_coe_perf', 'hr_coe_otd'];
+
 const POTENTIAL_LABEL: Record<string, string> = { high: '高', mid: '中', low: '低' };
 
 /** 与后端 locate_grid 一致的建议格位：业绩列 × 潜力行 */
@@ -67,8 +70,9 @@ export function InvCalibrate() {
   const emp = selected ? emps.get(selected) : undefined;
   const current = results.find((r) => r.employee_id === selected);
 
-  // 仅 HR 在 CALIBRATING 状态可校准；其余角色/状态只读
-  const editable = activeRole === 'hr' && batch?.status === 'CALIBRATING';
+  // 仅干部/绩效/OTD 三个 COE 角色在 CALIBRATING 状态可校准；其余角色/状态只读
+  const editable =
+    !!activeRole && CALIBRATE_ROLES.includes(activeRole) && batch?.status === 'CALIBRATING';
 
   const locatedCount = results.filter((r) => r.located).length;
 
@@ -150,8 +154,8 @@ export function InvCalibrate() {
       return <Alert type="info" showIcon style={{ marginBottom: 16 }} message="批次已提交租户管理员确认发布，当前结果只读" />;
     if (batch?.status === 'PUBLISHED')
       return <Alert type="success" showIcon style={{ marginBottom: 16 }} message="批次已发布，九宫格定位已回写员工画像，当前结果只读" />;
-    if (activeRole !== 'hr')
-      return <Alert type="info" showIcon style={{ marginBottom: 16 }} message="校准由 HR 主导，您当前为只读视角" />;
+    if (activeRole && !CALIBRATE_ROLES.includes(activeRole))
+      return <Alert type="info" showIcon style={{ marginBottom: 16 }} message="校准由 COE（干部/绩效/组织发展）主导，您当前为只读视角" />;
     return null;
   };
 

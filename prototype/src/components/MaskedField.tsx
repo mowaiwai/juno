@@ -4,8 +4,8 @@ import { useActiveRoleMeta } from '@/store/auth';
 
 interface MaskedFieldProps {
   value?: string | number;
-  /** 字段类别：薪酬 / 测评 / 完整画像 */
-  kind?: 'salary' | 'assessment' | 'profile';
+  /** 字段类别：薪酬 / 绩效 / 测评 / 完整画像 */
+  kind?: 'salary' | 'perf' | 'assessment' | 'profile';
   format?: (v: string | number) => string;
 }
 
@@ -19,7 +19,11 @@ export function MaskedField({
 }: MaskedFieldProps) {
   const meta = useActiveRoleMeta();
   const allowed =
-    kind === 'salary' ? meta?.seeSalary : meta?.seeFullProfile;
+    kind === 'salary'
+      ? meta?.seeSalary
+      : kind === 'perf'
+        ? meta?.seePerf
+        : meta?.seeFullProfile;
 
   if (allowed && value !== undefined) {
     return <span className="num">{format ? format(value) : value}</span>;

@@ -14,7 +14,8 @@ const STATUS_COLOR = {
 export function ExamCenter() {
   const navigate = useNavigate()
   const activeRole = useAuth((s) => s.activeRole)
-  const isHr = activeRole === 'hr'
+  // AI 组卷审核：组织与人才发展、招聘运营
+  const isHr = activeRole === 'hr_coe_otd' || activeRole === 'hr_coe_recruit'
 
   const [papers, setPapers] = useState<ExamPaperDTO[]>([])
   const [attempts, setAttempts] = useState<AttemptDTO[]>([])

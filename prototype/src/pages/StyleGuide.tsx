@@ -251,11 +251,11 @@ export function StyleGuide() {
           </div>
         </Space>
         <Divider />
-        <Can roles={['hr']}>
-          <Tag color="green">Can 原语：仅 HR 可见此元素</Tag>
+        <Can roles={['hr_coe_otd']}>
+          <Tag color="green">Can 原语：仅 COE·组织与人才发展可见此元素</Tag>
         </Can>
         <span style={{ fontSize: 12, color: 'var(--ink-3)', marginLeft: 8 }}>
-          （切到 HR 视角可验证 Can 元素）
+          （切到 COE·组织与人才发展视角可验证 Can 元素）
         </span>
       </Section>
     </div>

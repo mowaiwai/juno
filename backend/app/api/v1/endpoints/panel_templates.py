@@ -4,17 +4,17 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, require_roles
+from app.core.deps import err, require_perm_user
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.review import ReviewPanelTemplate
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.review import PanelTemplateIn, PanelTemplateOut
 from app.services.review import backfill_for_template
 
 router = APIRouter(prefix="/review-panel-templates", tags=["review-panel-templates"])
 
-_hr = require_roles(Role.HR)
+_hr = require_perm_user("panel.manage")
 
 
 def _validate_members(db: Session, tenant_id, body: PanelTemplateIn) -> None:

@@ -1,8 +1,10 @@
 """IDP 个人发展计划端点。
 
 状态流转：draft → confirmed → reviewing → closed。
-- 员工/经理可创建草稿，HR 可确认/提交复盘/关闭
-- AI 生成：基于画像七维差距自动生成目标与行为计划
+ADR-0014 权限：
+- 本人始终可见/可创建自己的 IDP；
+- idp.coach（干部/绩效 COE、OTD、HRBP、部门领导）在激活角色数据范围内辅导；
+- AI 生成同辅导权限。
 """
 
 import uuid
@@ -11,12 +13,17 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import (
+    Principal,
+    err,
+    get_principal,
+    require_perm_user,
+)
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.idp import IDP, IDPStatus
 from app.models.profile import DIMENSION_KEYS, ProfileSnapshot
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.idp import (
     IDPCreateIn,
     IDPGenerateIn,
@@ -25,23 +32,39 @@ from app.schemas.idp import (
     KeyBehaviorUpdateIn,
 )
 from app.services.audit import audit_as
+from app.services.scope import apply_employee_scope, can_access_employee
 
 router = APIRouter(tags=["idp"])
 
+_coach = require_perm_user("idp.coach")
 
-def _can_view(db: Session, user: User, employee_id: uuid.UUID) -> bool:
-    """员工看自己，经理看下属，HR 看全员。"""
-    if user.has_any(Role.HR, Role.TENANT_ADMIN, Role.PLATFORM_ADMIN):
-        return True
-    employee = db.get(Employee, employee_id)
-    if employee is None:
+
+def _employee(db: Session, employee_id: uuid.UUID) -> Employee | None:
+    return db.get(Employee, employee_id)
+
+
+def _can_view(db: Session, principal: Principal, employee_id: uuid.UUID) -> bool:
+    """本人或落在辅导角色数据范围内的员工。"""
+    employee = _employee(db, employee_id)
+    if employee is None or employee.tenant_id != principal.user.tenant_id:
         return False
-    if user.has_any(Role.EMPLOYEE):
-        if employee.user_id == user.id:
-            return True
-    if user.has_any(Role.MANAGER):
-        return employee.manager_id is not None
-    return False
+    if employee.user_id == principal.user.id:
+        return True
+    return principal.can("idp.coach") and can_access_employee(
+        db, principal, employee
+    )
+
+
+def _visible_employee_ids(db: Session, principal: Principal) -> set[uuid.UUID]:
+    """本人 ∪ 激活角色数据范围内员工。"""
+    stmt = apply_employee_scope(select(Employee.id), db, principal)
+    ids = set(db.scalars(stmt).all())
+    own = db.scalar(
+        select(Employee.id).where(Employee.user_id == principal.user.id)
+    )
+    if own is not None:
+        ids.add(own)
+    return ids
 
 
 def _get_idp_or_404(db: Session, idp_id: uuid.UUID, tenant_id: uuid.UUID) -> IDP:
@@ -55,19 +78,19 @@ def _get_idp_or_404(db: Session, idp_id: uuid.UUID, tenant_id: uuid.UUID) -> IDP
 def list_idps(
     employee_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    """查询 IDP 列表，可按 employee_id 过滤。"""
+    """查询 IDP 列表，可按 employee_id 过滤；默认按激活角色数据范围收窄。"""
+    user = principal.user
     stmt = select(IDP).where(IDP.tenant_id == user.tenant_id)
     if employee_id is not None:
-        if not _can_view(db, user, employee_id):
-            raise err(403, "forbidden", "无权查看该员工 IDP")
+        if not _can_view(db, principal, employee_id):
+            raise err(404, "employee_not_found", "员工不存在")
         stmt = stmt.where(IDP.employee_id == employee_id)
     else:
-        if user.has_any(Role.EMPLOYEE):
-            emp = db.query(Employee).filter(Employee.user_id == user.id).first()
-            if emp:
-                stmt = stmt.where(IDP.employee_id == emp.id)
+        stmt = stmt.where(
+            IDP.employee_id.in_(_visible_employee_ids(db, principal))
+        )
     stmt = stmt.order_by(IDP.period.desc())
     return [IDPOut.model_validate(i) for i in db.scalars(stmt).all()]
 
@@ -76,11 +99,12 @@ def list_idps(
 def get_idp(
     idp_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
+    user = principal.user
     idp = _get_idp_or_404(db, idp_id, user.tenant_id)
-    if not _can_view(db, user, idp.employee_id):
-        raise err(403, "forbidden", "无权查看该 IDP")
+    if not _can_view(db, principal, idp.employee_id):
+        raise err(404, "idp_not_found", "IDP 不存在")
     return IDPOut.model_validate(idp)
 
 
@@ -88,9 +112,10 @@ def get_idp(
 def create_idp(
     body: IDPCreateIn,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
-    if not _can_view(db, user, body.employee_id):
+    user = principal.user
+    if not _can_view(db, principal, body.employee_id):
         raise err(403, "forbidden", "无权为该员工创建 IDP")
     idp = IDP(
         tenant_id=user.tenant_id,
@@ -114,11 +139,12 @@ def update_idp(
     idp_id: uuid.UUID,
     body: IDPUpdateIn,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
+    user = principal.user
     idp = _get_idp_or_404(db, idp_id, user.tenant_id)
-    if not _can_view(db, user, idp.employee_id):
-        raise err(403, "forbidden", "无权修改该 IDP")
+    if not _can_view(db, principal, idp.employee_id):
+        raise err(404, "idp_not_found", "IDP 不存在")
     if idp.status not in (IDPStatus.DRAFT,):
         raise err(409, "idp_not_editable", "仅草稿状态可编辑")
     if body.goals is not None:
@@ -135,12 +161,13 @@ def update_key_behavior_status(
     idp_id: uuid.UUID,
     body: KeyBehaviorUpdateIn,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
     """更新单条关键行为的状态（执行跟踪用）。"""
+    user = principal.user
     idp = _get_idp_or_404(db, idp_id, user.tenant_id)
-    if not _can_view(db, user, idp.employee_id):
-        raise err(403, "forbidden", "无权修改该 IDP")
+    if not _can_view(db, principal, idp.employee_id):
+        raise err(404, "idp_not_found", "IDP 不存在")
     updated = False
     for kb in idp.key_behaviors:
         if kb["behavior"] == body.behavior:
@@ -160,9 +187,12 @@ def update_key_behavior_status(
 def confirm_idp(
     idp_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR, Role.MANAGER)),
+    principal: Principal = Depends(get_principal),
 ):
+    user = principal.user
     idp = _get_idp_or_404(db, idp_id, user.tenant_id)
+    if not _can_view(db, principal, idp.employee_id):
+        raise err(404, "idp_not_found", "IDP 不存在")
     if idp.status != IDPStatus.DRAFT:
         raise err(409, "invalid_state", "仅草稿状态可确认")
     idp.status = IDPStatus.CONFIRMED
@@ -177,9 +207,12 @@ def submit_review(
     idp_id: uuid.UUID,
     body: dict,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR, Role.MANAGER)),
+    principal: Principal = Depends(get_principal),
 ):
+    user = principal.user
     idp = _get_idp_or_404(db, idp_id, user.tenant_id)
+    if not _can_view(db, principal, idp.employee_id):
+        raise err(404, "idp_not_found", "IDP 不存在")
     if idp.status != IDPStatus.CONFIRMED:
         raise err(409, "invalid_state", "仅已确认状态可提交复盘")
     idp.status = IDPStatus.REVIEWING
@@ -197,7 +230,7 @@ def submit_review(
 def close_idp(
     idp_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR)),
+    user: User = Depends(_coach),
 ):
     idp = _get_idp_or_404(db, idp_id, user.tenant_id)
     if idp.status != IDPStatus.REVIEWING:
@@ -213,13 +246,14 @@ def close_idp(
 def generate_idp(
     body: IDPGenerateIn,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
     """AI 基于画像差距生成 IDP 草稿。
 
     逻辑：取最新画像七维，找出低分维度（<75），生成对应发展目标与行为计划。
     """
-    if not _can_view(db, user, body.employee_id):
+    user = principal.user
+    if not _can_view(db, principal, body.employee_id):
         raise err(403, "forbidden", "无权为该员工生成 IDP")
 
     # 取最新画像

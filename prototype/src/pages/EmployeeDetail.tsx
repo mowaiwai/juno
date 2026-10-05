@@ -20,6 +20,7 @@ import { employeesApi, type EmployeeDetailItem } from '@/api/employees';
 import { orgApi, makeDeptName, type ChannelFamily, type GradeBand } from '@/api/org';
 import { profilesApi, type ProfileOut } from '@/api/profiles';
 import { applicationsApi, APPLICATION_STATUS_META, type ApplicationListItemDTO, type ApplicationStatusValue } from '@/api/applications';
+import { MaskedField } from '@/components/MaskedField';
 
 const IN_FLIGHT_STATUSES: ApplicationStatusValue[] = [
   'draft',
@@ -204,7 +205,11 @@ export function EmployeeDetail() {
           <Card variant="borderless" style={{ background: 'var(--surface)' }}>
             <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>绩效等级</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-              <span className="num" style={{ fontSize: 26, fontWeight: 700 }}>{emp.perf_grade ?? '—'}</span>
+              {meta?.seePerf ? (
+                <span className="num" style={{ fontSize: 26, fontWeight: 700 }}>{emp.perf_grade ?? '—'}</span>
+              ) : (
+                <MaskedField kind="perf" />
+              )}
             </div>
           </Card>
         </Col>
@@ -260,7 +265,9 @@ export function EmployeeDetail() {
               <Descriptions.Item label="本职级起">
                 {emp.grade_since ?? '—'}
               </Descriptions.Item>
-              <Descriptions.Item label="绩效等级">{emp.perf_grade ?? '—'}</Descriptions.Item>
+              <Descriptions.Item label="绩效等级">
+                {meta?.seePerf ? emp.perf_grade ?? '—' : <MaskedField kind="perf" />}
+              </Descriptions.Item>
               <Descriptions.Item label="直属上级">{emp.manager_name ?? '—'}</Descriptions.Item>
               {emp.certificates.length > 0 && (
                 <Descriptions.Item label="已获认证" span={2}>
@@ -345,7 +352,7 @@ export function EmployeeDetail() {
               >
                 <span className="ai-badge" style={{ marginRight: 8 }}>AI 画像</span>
                 {emp.name} 综合评分 {profile.overall}，画像版本 v{profile.version_seq}（{profile.generated_at?.slice(0, 10)}）。
-                {profileDims.get('perf')?.score !== undefined && ` 绩效维度 ${profileDims.get('perf')?.score ?? '—'} 分。`}
+                {meta?.seePerf && profileDims.get('perf')?.score !== undefined && ` 绩效维度 ${profileDims.get('perf')?.score ?? '—'} 分。`}
                 {profileDims.get('duty')?.score !== undefined && ` 职责履行 ${profileDims.get('duty')?.score ?? '—'} 分。`}
               </div>
             ) : (

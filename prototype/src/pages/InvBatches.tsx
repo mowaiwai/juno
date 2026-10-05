@@ -50,8 +50,8 @@ export function InvBatches() {
   const published = list.filter((b) => b.status === 'PUBLISHED').length;
   const running = list.filter((b) => b.status === 'CALIBRATING' || b.status === 'CONFIRMING').length;
 
-  // 后端：启动仅 HR；确认/退回仅租户管理员（MVP 将发布确认收敛给租户管理员）
-  const canStart = activeRole === 'hr';
+  // 后端：启动盘点（inventory.manage）仅 OTD；确认/退回仅租户管理员（MVP 将发布确认收敛给租户管理员）
+  const canStart = activeRole === 'hr_coe_otd';
   const canConfirm = activeRole === 'tenant_admin';
 
   const runAction = async (batchId: string, label: string, fn: () => Promise<unknown>) => {

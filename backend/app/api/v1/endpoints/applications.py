@@ -7,7 +7,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import settings
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import (
+    Principal,
+    err,
+    get_current_user,
+    get_principal,
+    require_active_roles_user,
+)
 from app.database import get_db
 from app.models.application import (
     Application,
@@ -190,7 +196,7 @@ def _require_owner_employee(
 def create_application(
     body: ApplicationCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.EMPLOYEE)),
+    user: User = Depends(require_active_roles_user(Role.EMPLOYEE)),
 ):
     employee = _current_employee(db, user)
     if employee is None:
@@ -255,8 +261,9 @@ def list_mine(db: Session = Depends(get_db), user: User = Depends(get_current_us
 def get_application(
     application_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
+    user = principal.user
     application = _get_application(db, application_id, user.tenant_id)
     standard_set = db.scalar(
         select(StandardSet)
@@ -264,7 +271,7 @@ def get_application(
         .options(selectinload(StandardSet.items))
     )
 
-    # 可见范围：本人、该单初审经理、被派单的评审成员、HR
+    # 可见范围：本人、该单初审经理、被派单的评审成员、认证管理角色（panel.manage）
     employee = _current_employee(db, user)
     is_owner = employee is not None and employee.id == application.employee_id
     is_manager = (
@@ -278,7 +285,8 @@ def get_application(
             )
         )
     )
-    if not any([is_owner, is_manager, is_panel_member]) and not user.has_any(Role.HR):
+    is_staff = principal.can("panel.manage")
+    if not any([is_owner, is_manager, is_panel_member, is_staff]):
         raise err(404, "not_found", "申请单不存在")
     return _detail_out(application, standard_set)
 

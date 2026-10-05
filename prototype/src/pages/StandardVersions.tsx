@@ -420,7 +420,7 @@ function RealStandardVersions() {
                         >
                           {REAL_STATUS_LABEL[v.status] ?? v.status}
                         </Tag>
-                        {role === 'hr' && v.status === 'draft' && (
+                        {role === 'hr_coe_otd' && v.status === 'draft' && (
                           <Button
                             size="small"
                             type="link"

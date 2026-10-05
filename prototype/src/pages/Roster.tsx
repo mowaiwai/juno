@@ -20,6 +20,7 @@ import { employeesApi, type EmployeeDirectoryItem } from '@/api/employees';
 import { orgApi, type DepartmentItem } from '@/api/org';
 import { useActiveRoleMeta } from '@/store/auth';
 import { Can } from '@/components/Can';
+import { MaskedField } from '@/components/MaskedField';
 
 const PERF_COLOR: Record<string, { bg: string; fg: string }> = {
   S: { bg: 'var(--sage-soft)', fg: 'var(--sage)' },
@@ -123,6 +124,8 @@ export function Roster() {
       dataIndex: 'perf_grade',
       width: 70,
       render: (v: string | null) => {
+        // 绩效列按激活角色掩码（SSC/招聘/薪酬等角色不可见）
+        if (!meta?.seePerf) return <MaskedField kind="perf" />;
         if (!v) return <span style={{ color: 'var(--ink-4)' }}>—</span>;
         const c = PERF_COLOR[v];
         return (
@@ -166,7 +169,7 @@ export function Roster() {
             当前视角（{meta?.label}）可见 {employees.length} 人
           </div>
         </div>
-        <Can roles={['hr']}>
+        <Can roles={['hr_coe_otd', 'ssc']}>
           <Button
             icon={<DownloadOutlined />}
             onClick={() => message.info('导出功能将在后续版本提供')}
@@ -224,14 +227,16 @@ export function Roster() {
               .sort()
               .map((g) => ({ value: g, label: g }))}
           />
-          <Select
-            placeholder="绩效"
-            allowClear
-            style={{ minWidth: 100 }}
-            value={perf}
-            onChange={setPerf}
-            options={['S', 'A', 'B', 'C', 'D'].map((p) => ({ value: p, label: `${p} 级` }))}
-          />
+          {meta?.seePerf && (
+            <Select
+              placeholder="绩效"
+              allowClear
+              style={{ minWidth: 100 }}
+              value={perf}
+              onChange={setPerf}
+              options={['S', 'A', 'B', 'C', 'D'].map((p) => ({ value: p, label: `${p} 级` }))}
+            />
+          )}
           <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>
             筛选出 {list.length} 人
           </span>

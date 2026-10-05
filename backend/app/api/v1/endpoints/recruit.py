@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, get_current_user, require_roles
+from app.core.deps import err, get_current_user, require_perm_user
 from app.database import get_db
 from app.models.recruit import (
     Candidate,
@@ -21,7 +21,7 @@ from app.models.recruit import (
     QuestionStatus,
     Requisition,
 )
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.recruit import (
     CandidateOut,
     InterviewQuestionOut,
@@ -93,7 +93,7 @@ def list_questions(
 def generate_questions(
     body: QuestionGenerateIn,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR, Role.TENANT_ADMIN)),
+    user: User = Depends(require_perm_user("recruit.manage")),
 ):
     """AI 按职级生成面试题（待审核状态）。
 
@@ -146,7 +146,7 @@ def review_question(
     question_id: uuid.UUID,
     body: QuestionReviewIn,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR, Role.TENANT_ADMIN)),
+    user: User = Depends(require_perm_user("recruit.manage")),
 ):
     """审核面试题：通过 → approved，驳回 → rejected。"""
     q = db.get(InterviewQuestion, question_id)

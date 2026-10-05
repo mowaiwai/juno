@@ -18,7 +18,7 @@ from app.models.exam import (
     ExamQuestion,
     PaperStatus,
 )
-from app.models.user import Role, User
+from app.models.user import User
 from app.services.ai import _ai_settings, _month_used, _tenant_config
 from app.services.llm import get_client
 
@@ -202,22 +202,24 @@ def reject_paper(db: Session, paper: ExamPaper, reason: str) -> ExamPaper:
 # 查询
 # ---------------------------------------------------------------------------
 
-def list_papers(db: Session, user: User) -> list[ExamPaper]:
+def list_papers(
+    db: Session, user: User, *, include_unpublished: bool = False
+) -> list[ExamPaper]:
     stmt = select(ExamPaper).where(ExamPaper.tenant_id == user.tenant_id)
     papers = db.scalars(stmt.order_by(ExamPaper.created_at.desc())).all()
-    if user.has_any(Role.HR, Role.TENANT_ADMIN):
+    if include_unpublished:
         return list(papers)
     # 其余角色只看已发布
     return [p for p in papers if p.status == PaperStatus.PUBLISHED]
 
 
-def get_paper_for_user(db: Session, paper_id, user: User) -> ExamPaper:
+def get_paper_for_user(
+    db: Session, paper_id, user: User, *, include_unpublished: bool = False
+) -> ExamPaper:
     paper = db.get(ExamPaper, paper_id)
     if paper is None or paper.tenant_id != user.tenant_id:
         return None
-    if paper.status != PaperStatus.PUBLISHED and not user.has_any(
-        Role.HR, Role.TENANT_ADMIN
-    ):
+    if paper.status != PaperStatus.PUBLISHED and not include_unpublished:
         return None
     return paper
 
@@ -261,13 +263,14 @@ def start_attempt(db: Session, paper: ExamPaper, user) -> ExamAttempt:
     return attempt
 
 
-def get_owned_attempt(db: Session, attempt_id, user) -> ExamAttempt | None:
+def get_owned_attempt(
+    db: Session, attempt_id, user, *, is_admin: bool = False
+) -> ExamAttempt | None:
     attempt = db.get(ExamAttempt, attempt_id)
     if attempt is None or attempt.tenant_id != user.tenant_id:
         return None
     employee = _employee_for_user(db, user)
     is_owner = employee is not None and attempt.examinee_id == employee.id
-    is_admin = user.has_any(Role.HR, Role.TENANT_ADMIN)
     if not (is_owner or is_admin):
         return None
     return attempt

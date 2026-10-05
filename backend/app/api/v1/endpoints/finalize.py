@@ -5,7 +5,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, require_roles
+from app.core.deps import (
+    err,
+    require_active_roles_user,
+    require_perm_user,
+)
 from app.database import get_db
 from app.models.ai import AISuggestion
 from app.models.application import Application, ApplicationStatus, Decision
@@ -21,6 +25,9 @@ from app.services.notification import (
 from app.services.review import is_lock_holder
 
 router = APIRouter(tags=["finalize"])
+
+# 认证全租户列表与发布：COE·组织与人才发展 / 任职资格管理委员会（panel.manage）
+_cert_admin = require_perm_user("panel.manage")
 
 
 def _employee_of(db: Session, user: User) -> Employee:
@@ -60,13 +67,13 @@ def _list_item_with_name(db: Session, application: Application) -> ApplicationLi
     return item
 
 
-# ---- HR：全租户申请列表 ----
+# ---- 认证管理：全租户申请列表 ----
 
 @router.get("/applications", response_model=list[ApplicationListItem])
 def list_all_applications(
     status: ApplicationStatus | None = None,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR)),
+    user: User = Depends(_cert_admin),
 ):
     stmt = select(Application).where(
         Application.tenant_id == user.tenant_id
@@ -89,7 +96,7 @@ def submit_decision(
     application_id: uuid.UUID,
     body: DecisionIn,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.LEAD_REVIEWER)),
+    user: User = Depends(require_active_roles_user(Role.LEAD_REVIEWER)),
 ):
     lead = _employee_of(db, user)
     application = _get_owned_application(db, application_id, user.tenant_id)
@@ -168,7 +175,7 @@ def submit_decision(
     return _list_item(application)
 
 
-# ---- HR：发布 ----
+# ---- 认证管理：发布 ----
 
 @router.post(
     "/applications/{application_id}/publish",
@@ -177,7 +184,7 @@ def submit_decision(
 def publish_application(
     application_id: uuid.UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR)),
+    user: User = Depends(_cert_admin),
 ):
     application = _get_owned_application(db, application_id, user.tenant_id)
     if application.status != ApplicationStatus.APPROVED:

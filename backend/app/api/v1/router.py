@@ -25,9 +25,15 @@ from app.api.v1.endpoints import (
     org,
     org_diagnosis,
     panel_templates,
+    perf,
+    perf_dev,
+    perf_plans,
+    perf_publish,
+    perf_results,
     profiles,
     recruit,
     review,
+    roles,
     standard_sets,
     tenant_level_mapping,
     users,
@@ -52,6 +58,7 @@ def health(db: Session = Depends(get_db)):
 router.include_router(auth.router)
 router.include_router(me.router)
 router.include_router(users.router)
+router.include_router(roles.router)
 router.include_router(employees.router)
 router.include_router(standard_sets.router)
 router.include_router(level_framework.router)
@@ -74,3 +81,8 @@ router.include_router(recruit.router)
 router.include_router(gaps.router)
 router.include_router(org_diagnosis.router)
 router.include_router(org.router)
+router.include_router(perf.router)
+router.include_router(perf_plans.router)
+router.include_router(perf_results.router)
+router.include_router(perf_publish.router)
+router.include_router(perf_dev.router)

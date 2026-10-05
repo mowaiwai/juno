@@ -29,7 +29,8 @@ def test_me_returns_current_user(client):
     body = resp.json()
     assert body["email"] == "employee@xingye.test"
     assert body["name"] == "许星遥"
-    assert body["role"] == "employee"
+    assert body["active_role_ref"] == "employee"
+    assert any(r["ref"] == "employee" for r in body["role_refs"])
     assert body["tenant_id"]
 
 

@@ -688,8 +688,8 @@ function RealPanelPage() {
 }
 
 function RealCertVote() {
-  const persona = useAuth((s) => s.persona);
-  if (persona?.defaultRole !== 'cert_panel') {
+  const activeRole = useAuth((s) => s.activeRole);
+  if (activeRole !== 'cert_panel') {
     return (
       <div className="page" style={{ maxWidth: 720 }}>
         <Card variant="borderless" style={{ background: 'var(--surface)' }}>

@@ -3,9 +3,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_roles
+from app.core.deps import require_perm_user
 from app.database import get_db
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.level_framework import (
     TenantMappingIn,
     TenantMappingOut,
@@ -17,7 +17,7 @@ from app.services.level_framework import (
 
 router = APIRouter(tags=["tenant-level-mapping"])
 
-_mapping_roles = require_roles(Role.HR, Role.TENANT_ADMIN)
+_mapping_roles = require_perm_user("mapping.manage")
 
 
 def _view(db: Session, user: User) -> TenantMappingOut:

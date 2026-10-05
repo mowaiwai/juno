@@ -3,9 +3,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, require_roles
+from app.core.deps import Principal, err, require_perm
 from app.database import get_db
-from app.models.user import Role, User
 from app.schemas.cockpit import AskIn, AskOut
 from app.services.cockpit import answer_question
 
@@ -16,8 +15,9 @@ router = APIRouter(prefix="/cockpit", tags=["cockpit"])
 def ask_endpoint(
     body: AskIn,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.HR, Role.EXECUTIVE)),
+    principal: Principal = Depends(require_perm("cockpit.ask")),
 ):
+    user = principal.user
     try:
         result = answer_question(db, user.tenant_id, body.question)
     except ValueError as exc:

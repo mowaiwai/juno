@@ -31,9 +31,23 @@ from app.models.exam import (
     ExamPaper,
     ExamQuestion,
 )
+# P1 绩效内生：显式导入确保测试库建表
+from app.models.perf import (
+    CoachingRecord,
+    PerfPlan,
+    PerfResult,
+    Pip,
+)
+from app.models.user import custom_role_ref
 from app.services.level_framework import seed_v1_framework
 from app.services.llm import set_client_provider
 from app.services.email import set_sender_provider
+from app.services.org_service import seed_departments
+from app.services.role_service import (
+    ensure_preset_all_hr,
+    grant_role,
+    set_active_role,
+)
 
 from tests.fake_llm import FakeLLMClient
 from tests.fake_email import RecordingEmailSender
@@ -70,6 +84,11 @@ def db_session(tmp_path_factory):
     session.add_all([t1, t2])
     session.flush()
 
+    # 部门主数据（数据范围 subtree/assigned_depts 依赖部门树）
+    seed_departments(session, t1.id)
+    seed_departments(session, t2.id)
+    session.flush()
+
     def user(tenant, email, name, role):
         return User(
             tenant_id=tenant.id,
@@ -81,7 +100,9 @@ def db_session(tmp_path_factory):
         )
 
     users = {
-        "t1_hr": user(t1, "hr@xingye.test", "温晚晴", Role.HR),
+        # HR 账号先以 EMPLOYEE 建账，随后挂租户预设「综合 HR（一人全包）」
+        # 自定义角色并设为激活角色（七模板权限并集 + global，等价旧 HR）
+        "t1_hr": user(t1, "hr@xingye.test", "温晚晴", Role.EMPLOYEE),
         "t1_admin": user(t1, "admin@xingye.test", "岑风眠", Role.TENANT_ADMIN),
         "t1_manager": user(t1, "manager@xingye.test", "陆行舟", Role.MANAGER),
         "t1_employee": user(t1, "employee@xingye.test", "许星遥", Role.EMPLOYEE),
@@ -90,12 +111,19 @@ def db_session(tmp_path_factory):
         "t1_lead": user(t1, "lead@xingye.test", "江予舟", Role.LEAD_REVIEWER),
         "t1_rev1": user(t1, "rev1@xingye.test", "苏望知", Role.REVIEWER),
         "t1_rev2": user(t1, "rev2@xingye.test", "顾言溪", Role.REVIEWER),
-        "t2_hr": user(t2, "hr@linyuan.test", "纪南乔", Role.HR),
+        "t2_hr": user(t2, "hr@linyuan.test", "纪南乔", Role.EMPLOYEE),
         "t2_employee": user(t2, "employee@linyuan.test", "路之遥", Role.EMPLOYEE),
         "t1_platform_admin": user(t1, "admin@platform.test", "平台管理员",
                                   Role.PLATFORM_ADMIN),
     }
     session.add_all(users.values())
+    session.flush()
+
+    for _tenant, _hr in ((t1, users["t1_hr"]), (t2, users["t2_hr"])):
+        _preset = ensure_preset_all_hr(session, _tenant.id)
+        _ref = custom_role_ref(_preset.id)
+        grant_role(session, _tenant.id, _hr.id, _ref)
+        set_active_role(session, _tenant.id, _hr.id, _ref)
     session.flush()
 
     def employee(
@@ -174,6 +202,11 @@ def db_session(tmp_path_factory):
             ),
         ]
     )
+    session.commit()
+
+    # 员工已建账：绑定种子部门领导（201→E10002、305→E10020）并自动授经理角
+    seed_departments(session, t1.id)
+    seed_departments(session, t2.id)
     session.commit()
 
     # 平台资产：首个已发布框架 v1（幂等）
@@ -371,5 +404,12 @@ def restore_mutable_employee_state(db_session):
     # 基线版本还原状态（如发布导致旧版被归档）
     for v, values in fw_snapshot:
         v.status, v.published_at = values
+
+    # 绩效内生：P1 新表为纯增量，测试期间新增行全量清理（顺序避外键）
+    db_session.query(CoachingRecord).delete(synchronize_session=False)
+    db_session.query(Pip).delete(synchronize_session=False)
+    db_session.query(PerfResult).delete(synchronize_session=False)
+    db_session.query(PerfPlan).delete(synchronize_session=False)
+    db_session.flush()
 
     db_session.commit()
