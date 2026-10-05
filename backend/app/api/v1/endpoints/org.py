@@ -15,10 +15,12 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import Principal, err, get_current_user, require_perm
 from app.database import get_db
+from app.models.compensation import TenantSalaryBand
 from app.models.employee import Employee
 from app.models.org import Department
 from app.models.user import User
 from app.services.audit import audit_as
+from app.services.grade_catalog import CHANNELS, DEFAULT_BANDS
 from app.services.org_service import set_department_leader
 
 router = APIRouter(prefix="/org", tags=["org"])
@@ -59,83 +61,6 @@ FAMILY_LABEL = {
 }
 
 # ---------------------------------------------------------------------------
-# 职级通道（制度级静态主数据）
-# ---------------------------------------------------------------------------
-
-CHANNELS = [
-    {
-        "family": "P",
-        "name": "专业族",
-        "desc": "深耕专业能力，走「资深专家」路线，与管理者同酬同级",
-        "sequences": ["SW 软件研发", "ENG 机械工程"],
-        "grades": [
-            {"grade": "P1", "title": "见习生", "band_range": "薪级 3-4", "salary_band": [4000, 6000], "promote_rule": "试用期转正评估通过"},
-            {"grade": "P2", "title": "初级", "band_range": "薪级 5-7", "salary_band": [8000, 14000], "promote_rule": "通过本序列 P2 标准认证"},
-            {"grade": "P3", "title": "中级 / 骨干", "band_range": "薪级 8-11", "salary_band": [16000, 28000], "promote_rule": "通过 P3 标准认证；近一年绩效 B 以上"},
-            {"grade": "P4", "title": "高级", "band_range": "薪级 12-15", "salary_band": [30000, 45000], "review_years": 3, "promote_rule": "通过 P4 标准认证 + 答辩；近两年绩效 A 以上 1 次"},
-            {"grade": "P5", "title": "资深专家", "band_range": "薪级 16-18", "salary_band": [45000, 65000], "review_years": 3, "promote_rule": "P5 标准认证 + 委员会终审；有跨团队技术影响力"},
-            {"grade": "P6", "title": "首席", "band_range": "薪级 19-21", "salary_band": [65000, 90000], "promote_rule": "首席答辩：公司级技术贡献 + 管委会任命"},
-        ],
-    },
-    {
-        "family": "T",
-        "name": "技术操作族",
-        "desc": "工艺、产线与设备的技术技能路线，突出「技师」价值",
-        "sequences": ["OP 工艺操作"],
-        "grades": [
-            {"grade": "T1", "title": "普工", "band_range": "薪级 3-4", "salary_band": [4000, 6000], "promote_rule": "入职培训考核通过"},
-            {"grade": "T2", "title": "技工", "band_range": "薪级 5-7", "salary_band": [8000, 14000], "promote_rule": "技能鉴定初级 + 师带徒出师"},
-            {"grade": "T3", "title": "技师", "band_range": "薪级 8-11", "salary_band": [15000, 24000], "promote_rule": "通过 OP-T3 标准认证（实操 + 问答）"},
-            {"grade": "T4", "title": "高级技师", "band_range": "薪级 12-15", "salary_band": [26000, 38000], "promote_rule": "T4 认证 + 解决重大工艺问题案例 1 项"},
-            {"grade": "T5", "title": "首席技师", "band_range": "薪级 16-18", "salary_band": [40000, 55000], "promote_rule": "首席技师评聘：公司级技术攻关成果"},
-        ],
-    },
-    {
-        "family": "M",
-        "name": "管理族",
-        "desc": "通过团队拿结果，管理职级与专业职级一一对应同酬",
-        "sequences": ["MGT 综合管理"],
-        "grades": [
-            {"grade": "M1", "title": "储备主管", "band_range": "薪级 6-8", "salary_band": [12000, 18000], "promote_rule": "后备干部池结业 + 部门任命"},
-            {"grade": "M2", "title": "经理", "band_range": "薪级 12-15", "salary_band": [30000, 58000], "promote_rule": "M2 任职资格认证（管理行为举证）"},
-            {"grade": "M3", "title": "总监", "band_range": "薪级 16-18", "salary_band": [50000, 80000], "promote_rule": "M3 认证 + 组织建设成果评审"},
-            {"grade": "M4", "title": "中心负责人", "band_range": "薪级 19-21", "salary_band": [70000, 100000], "promote_rule": "管委会评审任命"},
-            {"grade": "M5", "title": "高管", "band_range": "薪级 22-24", "salary_band": [110000, 140000], "promote_rule": "董事会任命"},
-        ],
-    },
-    {
-        "family": "O",
-        "name": "职能族",
-        "desc": "人力、财务、采购、IT 等职能支持路线",
-        "sequences": ["HR 人力资源", "PUR 采购", "OPS 运维"],
-        "grades": [
-            {"grade": "O1", "title": "专员（初）", "band_range": "薪级 3-4", "salary_band": [4000, 6000], "promote_rule": "转正评估通过"},
-            {"grade": "O2", "title": "专员", "band_range": "薪级 5-7", "salary_band": [8000, 14000], "promote_rule": "通过本序列 O2 标准认证"},
-            {"grade": "O3", "title": "主管", "band_range": "薪级 8-11", "salary_band": [15000, 26000], "promote_rule": "O3 认证 + 独立负责一个职能模块"},
-            {"grade": "O4", "title": "高级经理", "band_range": "薪级 12-15", "salary_band": [28000, 40000], "promote_rule": "O4 认证 + 跨部门项目主导经历"},
-        ],
-    },
-    {
-        "family": "S",
-        "name": "销售族",
-        "desc": "大客户与渠道销售路线，提成与职级带宽并行",
-        "sequences": ["SAL 销售"],
-        "grades": [
-            {"grade": "S1", "title": "销售代表", "band_range": "薪级 4-5", "salary_band": [5000, 8000], "promote_rule": "首单成交 + 销售基础认证"},
-            {"grade": "S2", "title": "高级代表", "band_range": "薪级 6-8", "salary_band": [10000, 18000], "promote_rule": "连续两季达成率 ≥ 100%"},
-            {"grade": "S3", "title": "大客户经理", "band_range": "薪级 9-13", "salary_band": [20000, 45000], "promote_rule": "S3 认证 + 标杆客户案例答辩"},
-            {"grade": "S4", "title": "销售总监", "band_range": "薪级 14-17", "salary_band": [45000, 70000], "promote_rule": "区域业绩 + 团队管理评审"},
-        ],
-    },
-]
-
-DEFAULT_BANDS: dict[str, list[int]] = {
-    g["grade"]: g["salary_band"]
-    for c in CHANNELS
-    for g in c["grades"]
-}
-
-# ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
 
@@ -170,6 +95,12 @@ class GradeBandOut(BaseModel):
     salary_band: list[int]
     review_years: int | None = None
     promote_rule: str
+    customized: bool = False
+    p25: float | None = None
+    p50: float | None = None
+    p75: float | None = None
+    p90: float | None = None
+    market_source_year: int | None = None
 
 
 class ChannelFamilyOut(BaseModel):
@@ -190,6 +121,17 @@ class PositionOut(BaseModel):
     is_core: bool
     headcount: int
     on_duty: int
+
+
+class SalaryBandIn(BaseModel):
+    grade: str
+    min_value: int
+    max_value: int
+    p25: float | None = None
+    p50: float | None = None
+    p75: float | None = None
+    p90: float | None = None
+    market_source_year: int | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -351,34 +293,116 @@ def list_positions(
 
 
 # ---------------------------------------------------------------------------
-# 职级通道（制度级静态数据）
+# 职级通道 + 薪级带宽（静态默认，租户可覆盖带宽）
 # ---------------------------------------------------------------------------
+
+def _tenant_bands(db: Session, tenant_id) -> dict[str, TenantSalaryBand]:
+    return {
+        b.grade: b
+        for b in db.scalars(
+            select(TenantSalaryBand).where(TenantSalaryBand.tenant_id == tenant_id)
+        ).all()
+    }
+
 
 @router.get("/channels", response_model=list[ChannelFamilyOut])
 def list_channels(
+    db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """职级通道配置（制度级静态数据）。"""
-    return [
-        ChannelFamilyOut(
+    """职级通道配置；薪级带宽取租户覆盖，未覆盖回落平台默认。"""
+    overrides = _tenant_bands(db, user.tenant_id)
+    result = []
+    for c in CHANNELS:
+        grades = []
+        for g in c["grades"]:
+            band = overrides.get(g["grade"])
+            grades.append(GradeBandOut(
+                grade=g["grade"],
+                title=g["title"],
+                band_range=g["band_range"],
+                salary_band=[band.min_value, band.max_value] if band else g["salary_band"],
+                review_years=g.get("review_years"),
+                promote_rule=g["promote_rule"],
+                customized=band is not None,
+                p25=band.p25 if band else None,
+                p50=band.p50 if band else None,
+                p75=band.p75 if band else None,
+                p90=band.p90 if band else None,
+                market_source_year=band.market_source_year if band else None,
+            ))
+        result.append(ChannelFamilyOut(
             family=c["family"],
             name=c["name"],
             desc=c["desc"],
             sequences=c["sequences"],
-            grades=[
-                GradeBandOut(
-                    grade=g["grade"],
-                    title=g["title"],
-                    band_range=g["band_range"],
-                    salary_band=g["salary_band"],
-                    review_years=g.get("review_years"),
-                    promote_rule=g["promote_rule"],
-                )
-                for g in c["grades"]
-            ],
+            grades=grades,
+        ))
+    return result
+
+
+@router.put("/salary-bands", response_model=GradeBandOut)
+def upsert_salary_band(
+    body: SalaryBandIn,
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(require_perm("comp.band.manage")),
+):
+    if body.grade not in DEFAULT_BANDS:
+        raise err(404, "grade_not_found", "未知职级，带宽只能覆盖既有职级")
+    if body.min_value >= body.max_value:
+        raise err(422, "invalid_band", "带宽下限必须小于上限")
+    row = db.scalar(
+        select(TenantSalaryBand).where(
+            TenantSalaryBand.tenant_id == principal.user.tenant_id,
+            TenantSalaryBand.grade == body.grade,
         )
-        for c in CHANNELS
-    ]
+    )
+    if row is None:
+        row = TenantSalaryBand(
+            tenant_id=principal.user.tenant_id,
+            grade=body.grade,
+            min_value=body.min_value,
+            max_value=body.max_value,
+            p25=body.p25, p50=body.p50, p75=body.p75, p90=body.p90,
+            market_source_year=body.market_source_year,
+            updated_by=principal.user.id,
+        )
+        db.add(row)
+    else:
+        row.min_value, row.max_value = body.min_value, body.max_value
+        row.p25, row.p50, row.p75, row.p90 = body.p25, body.p50, body.p75, body.p90
+        row.market_source_year = body.market_source_year
+        row.updated_by = principal.user.id
+    audit_as(db, principal.user, "salary_band_updated", "org", None,
+             after={"grade": body.grade,
+                    "band": [body.min_value, body.max_value]})
+    db.commit()
+    title = next(
+        (g["title"] for c in CHANNELS for g in c["grades"] if g["grade"] == body.grade),
+        body.grade,
+    )
+    band_range = next(
+        (g["band_range"] for c in CHANNELS for g in c["grades"]
+         if g["grade"] == body.grade),
+        "",
+    )
+    promote_rule = next(
+        (g["promote_rule"] for c in CHANNELS for g in c["grades"]
+         if g["grade"] == body.grade),
+        "",
+    )
+    review_years = next(
+        (g.get("review_years") for c in CHANNELS for g in c["grades"]
+         if g["grade"] == body.grade),
+        None,
+    )
+    return GradeBandOut(
+        grade=body.grade, title=title, band_range=band_range,
+        salary_band=[body.min_value, body.max_value],
+        review_years=review_years, promote_rule=promote_rule, customized=True,
+        p25=body.p25, p50=body.p50, p75=body.p75, p90=body.p90,
+        market_source_year=body.market_source_year,
+    )
 
 
 @router.get("/family-label")

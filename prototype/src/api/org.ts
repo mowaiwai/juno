@@ -21,6 +21,12 @@ export interface GradeBand {
   salary_band: [number, number];
   review_years?: number;
   promote_rule: string;
+  customized?: boolean;
+  p25?: number | null;
+  p50?: number | null;
+  p75?: number | null;
+  p90?: number | null;
+  market_source_year?: number | null;
 }
 
 export interface ChannelFamily {

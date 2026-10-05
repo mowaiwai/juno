@@ -38,6 +38,14 @@ from app.models.perf import (
     PerfResult,
     Pip,
 )
+from app.models.compensation import (
+    AdjustmentPlan,
+    BonusDeptPool,
+    BonusPlan,
+    BonusPlanItem,
+    SalaryAdjustmentHistory,
+    TenantSalaryBand,
+)
 from app.models.user import custom_role_ref
 from app.services.level_framework import seed_v1_framework
 from app.services.llm import set_client_provider
@@ -410,6 +418,13 @@ def restore_mutable_employee_state(db_session):
     db_session.query(Pip).delete(synchronize_session=False)
     db_session.query(PerfResult).delete(synchronize_session=False)
     db_session.query(PerfPlan).delete(synchronize_session=False)
+    # 薪酬激励：P2 新表全量清理（顺序避外键）
+    db_session.query(SalaryAdjustmentHistory).delete(synchronize_session=False)
+    db_session.query(BonusPlanItem).delete(synchronize_session=False)
+    db_session.query(BonusDeptPool).delete(synchronize_session=False)
+    db_session.query(BonusPlan).delete(synchronize_session=False)
+    db_session.query(AdjustmentPlan).delete(synchronize_session=False)
+    db_session.query(TenantSalaryBand).delete(synchronize_session=False)
     db_session.flush()
 
     db_session.commit()

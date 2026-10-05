@@ -1,47 +1,77 @@
-import { useMemo, useState } from 'react';
-import { Button, Card, Col, Empty, Modal, Row, Table, Tabs, Tag, message } from 'antd';
-import { approvalHistory, approvalPending, ApprovalRecord } from '@/mock/salary';
-import { employees } from '@/mock/people';
-import { deptName } from '@/mock/org';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Card, Col, Empty, Modal, Row, Table, Tabs, Tag, message } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import {
+  compApi,
+  type AdjustmentItem,
+  type AdjustmentPlan,
+  type AdjustmentPlanSummary,
+} from '@/api/comp';
+import { ApiError } from '@/api/client';
 import { useAuth } from '@/store/auth';
-import { MaskedField } from '@/components/MaskedField';
 
 const fmt = (v: number) => `¥${v.toLocaleString()}`;
+const money = (v: number | null | undefined) => (v == null ? '—' : fmt(v));
 
-const KIND_META = {
-  annual: { label: '年度调薪', color: 'var(--teal)', bg: 'var(--teal-soft)' },
-  promotion: { label: '晋升联动', color: 'var(--clay)', bg: 'var(--clay-soft)' },
+const STATUS_COLOR: Record<string, string> = {
+  draft: 'default',
+  approving: 'processing',
+  approved: 'success',
 };
-const STATUS_META: Record<ApprovalRecord['status'], { label: string; color: string; bg: string }> = {
-  1: { label: '审批中', color: 'var(--ochre)', bg: 'var(--ochre-soft)' },
-  2: { label: '已通过', color: 'var(--sage)', bg: 'var(--sage-soft)' },
-  3: { label: '已驳回', color: 'var(--danger)', bg: 'var(--danger-soft)' },
+const STATUS_LABEL: Record<string, string> = {
+  draft: '草稿（驳回退回）', approving: '审批中', approved: '已批准',
 };
 
-function EmployeeCell({ id }: { id: string }) {
-  const e = employees.find((x) => x.id === id);
-  if (!e) return <span>—</span>;
-  return (
-    <div>
-      <div style={{ fontWeight: 600 }}>{e.name}</div>
-      <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{deptName(e.deptId)} · {e.position}</div>
-    </div>
-  );
-}
+const MARK_LABEL: Record<string, string> = {
+  market_stop: '75 分位停涨',
+  pip_fail: 'PIP 不通过降薪',
+};
 
 export function SalaryApprove() {
-  const persona = useAuth((s) => s.persona);
-  const [records, setRecords] = useState<ApprovalRecord[]>(approvalPending);
-  const [rejecting, setRejecting] = useState<ApprovalRecord | null>(null);
+  const activeRole = useAuth((s) => s.activeRole);
+  const canApprove = activeRole === 'exec' || activeRole === 'tenant_admin';
+
+  const [plans, setPlans] = useState<AdjustmentPlanSummary[]>([]);
+  const [forbidden, setForbidden] = useState(false);
+  const [detail, setDetail] = useState<AdjustmentPlan | null>(null);
+  const [rejecting, setRejecting] = useState<AdjustmentPlan | null>(null);
   const [reason, setReason] = useState('');
 
-  const pending = records.filter((r) => r.status === 1);
-  const decidedLocal = records.filter((r) => r.status !== 1);
-  const pendingCost = pending.reduce((s, r) => s + (r.newSalary - r.oldSalary) * 12, 0);
+  const refresh = () => {
+    compApi.listAdjustmentPlans().then((rows) => {
+      setPlans(rows);
+      setForbidden(false);
+    }).catch((e: unknown) => {
+      if (e instanceof ApiError && e.status === 403) setForbidden(true);
+    });
+  };
 
-  const approve = (r: ApprovalRecord) => {
-    setRecords((list) => list.map((x) => (x.id === r.id ? { ...x, status: 2, decidedAt: '2026-09-27', decider: persona?.name } : x)));
-    message.success(`${employees.find((e) => e.id === r.employeeId)?.name} 调薪已通过，职级薪酬联动生效`);
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const pending = useMemo(() => plans.filter((p) => p.status === 'approving'), [plans]);
+  const history = useMemo(
+    () => plans.filter((p) => p.status === 'approved' || (p.status === 'draft' && !!p.reject_reason)),
+    [plans],
+  );
+  const pendingCost = pending.reduce((s, p) => s + p.budget_total * 12, 0);
+
+  const openDetail = (id: string) => {
+    compApi.getAdjustmentPlan(id).then(setDetail).catch((e) => message.error(e.message));
+  };
+
+  const approve = (p: AdjustmentPlan) => {
+    Modal.confirm({
+      title: `批准方案「${p.plan_name}」`,
+      content: `共 ${p.items.length} 人，批准后逐人写入薪资账套并记录调薪历史，不可撤销。`,
+      onOk: () =>
+        compApi.approveAdjustment(p.id).then(() => {
+          message.success('方案已批准，薪资账套已联动更新');
+          setDetail(null);
+          refresh();
+        }).catch((e) => message.error(e.message)),
+    });
   };
 
   const confirmReject = () => {
@@ -50,97 +80,121 @@ export function SalaryApprove() {
       message.warning('驳回原因至少 5 个字，审批留痕必填');
       return;
     }
-    setRecords((list) => list.map((x) => (x.id === rejecting.id ? { ...x, status: 3, decidedAt: '2026-09-27', decider: persona?.name, rejectReason: reason.trim() } : x)));
-    message.success('已驳回，驳回原因已留痕');
-    setRejecting(null);
-    setReason('');
+    compApi.rejectAdjustment(rejecting.id, reason.trim()).then(() => {
+      message.success('已驳回，驳回原因已留痕');
+      setRejecting(null);
+      setReason('');
+      setDetail(null);
+      refresh();
+    }).catch((e) => message.error(e.message));
   };
 
-  const columns = (interactive: boolean) => [
-    { title: '员工', render: (_: unknown, r: ApprovalRecord) => <EmployeeCell id={r.employeeId} /> },
+  const itemColumns: ColumnsType<AdjustmentItem> = [
     {
-      title: '类型',
-      width: 110,
-      render: (_: unknown, r: ApprovalRecord) => (
-        <Tag style={{ borderRadius: 6, background: KIND_META[r.kind].bg, color: KIND_META[r.kind].color, borderColor: 'transparent' }}>{KIND_META[r.kind].label}</Tag>
+      title: '员工',
+      render: (_: unknown, r: AdjustmentItem) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{r.name ?? r.employee_id}</div>
+          <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{r.employee_no}</div>
+        </div>
       ),
     },
+    { title: '职级', width: 70, render: (_: unknown, r) => r.grade ?? '—' },
+    { title: '绩效', width: 70, render: (_: unknown, r) => r.perf_grade ?? '—' },
     {
-      title: '职级变动',
-      width: 110,
-      render: (_: unknown, r: ApprovalRecord) =>
-        r.oldGrade === r.newGrade ? (
-          <span style={{ color: 'var(--ink-4)' }}>{r.oldGrade} 不变</span>
-        ) : (
-          <span className="num" style={{ fontWeight: 700 }}>
-            {r.oldGrade} → {r.newGrade}
-          </span>
-        ),
+      title: '渗透率',
+      width: 80,
+      render: (_: unknown, r) => (r.penetration != null ? r.penetration.toFixed(2) : '—'),
     },
+    { title: '当前月薪', width: 110, render: (_: unknown, r) => money(r.current_salary) },
     {
-      title: '薪酬变动',
-      render: (_: unknown, r: ApprovalRecord) => (
-        <span className="num">
-          <MaskedField value={r.oldSalary} format={(v) => fmt(Number(v))} />
-          <span style={{ color: 'var(--ink-3)' }}> → </span>
-          <span style={{ color: 'var(--sage)', fontWeight: 700 }}>{fmt(r.newSalary)}</span>
-          <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>（+{Math.round(((r.newSalary - r.oldSalary) / r.oldSalary) * 100)}%）</span>
+      title: '建议调薪',
+      width: 90,
+      render: (_: unknown, r) => (
+        <span className="num" style={{ fontWeight: 700, color: r.suggested_pct < 0 ? 'var(--danger)' : 'var(--sage)' }}>
+          {r.suggested_pct > 0 ? '+' : ''}{r.suggested_pct}%
         </span>
       ),
     },
-    { title: '市场分位', width: 90, render: (_: unknown, r: ApprovalRecord) => (r.marketPercentile ? <span className="num">{r.marketPercentile}%</span> : '—') },
-    { title: '提交时间', width: 110, dataIndex: 'submittedAt' },
     {
-      title: '状态',
-      width: 100,
-      render: (_: unknown, r: ApprovalRecord) => (
-        <Tag style={{ borderRadius: 6, background: STATUS_META[r.status].bg, color: STATUS_META[r.status].color, borderColor: 'transparent', fontWeight: 600 }}>
-          {STATUS_META[r.status].label}
-        </Tag>
+      title: '建议月薪',
+      width: 110,
+      render: (_: unknown, r) => (
+        <span style={{ color: r.suggested_salary == null ? 'var(--ink-4)' : 'var(--sage)' }}>
+          {money(r.suggested_salary)}
+        </span>
       ),
     },
-    ...(interactive
-      ? [
-          {
-            title: '操作',
-            width: 150,
-            render: (_: unknown, r: ApprovalRecord) => (
-              <div style={{ display: 'flex' }}>
-                <Button type="link" size="small" style={{ color: 'var(--sage)', fontWeight: 600, padding: '0 4px' }} onClick={() => approve(r)}>
-                  通过
-                </Button>
-                <Button type="link" size="small" danger style={{ fontWeight: 600, padding: '0 4px' }} onClick={() => setRejecting(r)}>
-                  驳回
-                </Button>
-              </div>
-            ),
-          },
-        ]
-      : [
-          {
-            title: '审批结论',
-            render: (_: unknown, r: ApprovalRecord) => (
-              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>
-                {r.decider} · {r.decidedAt}
-                {r.rejectReason && <div style={{ color: 'var(--danger)', marginTop: 2 }}>驳回原因：{r.rejectReason}</div>}
-              </span>
-            ),
-          },
-        ]),
+    {
+      title: '标记',
+      width: 130,
+      render: (_: unknown, r) =>
+        r.mark ? <Tag color="error">{MARK_LABEL[r.mark] ?? r.mark}</Tag> : '—',
+    },
   ];
 
-  const historyColumns = useMemo(() => columns(false), []);
-  const pendingColumns = useMemo(() => columns(true), []);
+  const listColumns = (withActions: boolean): ColumnsType<AdjustmentPlanSummary> => [
+    { title: '方案名称', dataIndex: 'plan_name' },
+    { title: '人数', dataIndex: 'headcount', width: 80 },
+    {
+      title: '年化新增成本',
+      width: 150,
+      render: (_: unknown, p: AdjustmentPlanSummary) => <span className="num">{fmt(p.budget_total * 12)}</span>,
+    },
+    {
+      title: '状态',
+      width: 130,
+      render: (_: unknown, p: AdjustmentPlanSummary) => (
+        <Tag color={STATUS_COLOR[p.status]}>{STATUS_LABEL[p.status] ?? p.status}</Tag>
+      ),
+    },
+    ...(withActions
+      ? [{
+          title: '操作',
+          width: 160,
+          render: (_: unknown, p: AdjustmentPlanSummary) => (
+            <div style={{ display: 'flex' }}>
+              <Button
+                type="link" size="small" style={{ padding: '0 4px' }}
+                onClick={() => openDetail(p.id)}
+              >
+                {canApprove && p.status === 'approving' ? '审批' : '查看明细'}
+              </Button>
+            </div>
+          ),
+        }]
+      : [{
+          title: '结论',
+          render: (_: unknown, p: AdjustmentPlanSummary) =>
+            p.status === 'approved' ? (
+              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>
+                已批准{p.approved_at ? ` · ${p.approved_at.slice(0, 10)}` : ''}
+              </span>
+            ) : (
+              <span style={{ fontSize: 12, color: 'var(--danger)' }}>驳回：{p.reject_reason}</span>
+            ),
+        }]),
+  ];
 
   return (
     <div className="page" style={{ maxWidth: 1200 }}>
       <div className="page-header">
         <div>
           <h1 className="page-title font-serif">调薪审批</h1>
-          <div className="page-subtitle">建议 → 审批中 → 通过 / 驳回 · 驳回原因必填留痕 · 通过后职级薪酬联动生效</div>
+          <div className="page-subtitle">草稿 → 审批中 → 批准（写薪资账套）/ 驳回（退回草稿）· 驳回原因必填留痕{!canApprove && ' · 当前角色仅可查看'}</div>
         </div>
       </div>
 
+      {forbidden ? (
+        <Alert
+          type="error"
+          showIcon
+          style={{ borderRadius: 8 }}
+          message="无权查看调薪审批"
+          description="当前角色没有薪酬激励相关权限。调薪方案仅对薪酬 COE 与高管（高管视图金额掩码）开放，如需访问请联系管理员调整角色。"
+        />
+      ) : (
+        <>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={8}>
           <Card variant="borderless" style={{ background: 'var(--surface)' }} size="small">
@@ -150,7 +204,7 @@ export function SalaryApprove() {
         </Col>
         <Col span={8}>
           <Card variant="borderless" style={{ background: 'var(--surface)' }} size="small">
-            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>本批年化新增成本</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>待批年化新增成本</div>
             <div className="num" style={{ fontSize: 24, fontWeight: 700 }}>{fmt(pendingCost)}</div>
           </Card>
         </Col>
@@ -170,25 +224,25 @@ export function SalaryApprove() {
               key: 'pending',
               label: `待审批（${pending.length}）`,
               children: pending.length ? (
-                <Table rowKey="id" dataSource={pending} pagination={false} size="middle" columns={pendingColumns} />
+                <Table rowKey="id" dataSource={pending} pagination={false} size="middle" columns={listColumns(true)} />
               ) : (
-                <Empty description="本批已全部办结，等待 HR 归档生效" style={{ padding: '24px 0' }} />
+                <Empty description="暂无待批方案" style={{ padding: '24px 0' }} />
               ),
             },
             {
               key: 'history',
-              label: `已办结（${approvalHistory.length + decidedLocal.length}）`,
+              label: `已办结（${history.length}）`,
               children: (
                 <Table
                   rowKey="id"
-                  dataSource={[...decidedLocal, ...approvalHistory]}
+                  dataSource={history}
                   pagination={false}
                   size="middle"
-                  columns={historyColumns}
+                  columns={listColumns(false)}
                   expandable={{
-                    rowExpandable: (r) => !!r.rejectReason,
-                    expandedRowRender: (r) => (
-                      <div style={{ fontSize: 12, color: 'var(--danger)' }}>驳回原因：{r.rejectReason}</div>
+                    rowExpandable: (p) => !!p.reject_reason,
+                    expandedRowRender: (p) => (
+                      <div style={{ fontSize: 12, color: 'var(--danger)' }}>驳回原因：{p.reject_reason}</div>
                     ),
                   }}
                 />
@@ -200,13 +254,47 @@ export function SalaryApprove() {
 
       <Card variant="borderless" style={{ background: 'var(--surface-sunken)', marginTop: 16 }} size="small">
         <div style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 2 }}>
-          <b>流程约定</b>：晋升联动类调薪随认证结果自动发起（岗变薪变）；年度调薪由 HR 起草、高管审批。驳回后 HR 修改可重新提交，驳回历史永久留痕；
-          审批通过后当月薪资账套联动更新，并写审计日志（操作人 / 时间 / 前后状态）。
+          <b>流程约定</b>：年度调薪由 HR COE 测算、微调后提交；高管单级审批。批准后逐人写入薪资账套、生成调薪历史与审计日志；
+          驳回后方案退回草稿，HR 修改后可重新提交，驳回历史永久留痕。高管视图中个人金额按权限掩码，仅显示百分比与汇总。
         </div>
       </Card>
+        </>
+      )}
 
       <Modal
-        title="驳回调薪建议"
+        open={!!detail}
+        title={detail ? `${detail.plan_name} · ${STATUS_LABEL[detail.status] ?? detail.status}` : ''}
+        width={1000}
+        footer={
+          detail?.status === 'approving' && canApprove
+            ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Button danger onClick={() => setRejecting(detail)}>驳回</Button>
+                <Button type="primary" onClick={() => approve(detail)}>批准并写薪</Button>
+              </div>
+            )
+            : null
+        }
+        onCancel={() => setDetail(null)}
+      >
+        {detail && (
+          <>
+            {detail.reject_reason && (
+              <Tag color="error" style={{ marginBottom: 12 }}>上次驳回原因：{detail.reject_reason}</Tag>
+            )}
+            <Table
+              rowKey="employee_id"
+              dataSource={detail.items}
+              pagination={false}
+              size="small"
+              columns={itemColumns}
+            />
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        title="驳回调薪方案"
         open={!!rejecting}
         onOk={confirmReject}
         okText="确认驳回"
@@ -214,13 +302,12 @@ export function SalaryApprove() {
         onCancel={() => { setRejecting(null); setReason(''); }}
       >
         <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--ink-2)' }}>
-          驳回 {rejecting && employees.find((e) => e.id === rejecting.employeeId)?.name} 的调薪建议（
-          {rejecting && fmt(rejecting.oldSalary)} → {rejecting && fmt(rejecting.newSalary)}）。驳回原因必填，将留痕并通知起草人。
+          驳回后方案退回草稿，HR 修改后可重新提交。驳回原因必填，将留痕并通知起草人。
         </div>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="例如：分位数据未更新，暂缓至下批次"
+          placeholder="例如：市场分位数据未更新，暂缓至下批次"
           style={{ width: '100%', minHeight: 80, padding: 8, borderRadius: 6, border: '1px solid var(--line)', background: 'var(--surface)', fontSize: 13, fontFamily: 'inherit' }}
         />
       </Modal>

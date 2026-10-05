@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     audit_logs,
     auth,
     cockpit,
+    comp,
     core_positions,
     employees,
     exam,
@@ -81,6 +82,7 @@ router.include_router(recruit.router)
 router.include_router(gaps.router)
 router.include_router(org_diagnosis.router)
 router.include_router(org.router)
+router.include_router(comp.router)
 router.include_router(perf.router)
 router.include_router(perf_plans.router)
 router.include_router(perf_results.router)

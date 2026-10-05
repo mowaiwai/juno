@@ -67,6 +67,8 @@ import { MarketData } from '@/pages/MarketData';
 import { SalaryPlan } from '@/pages/SalaryPlan';
 import { SalaryApprove } from '@/pages/SalaryApprove';
 import { SalaryReport } from '@/pages/SalaryReport';
+import { MySalary } from '@/pages/MySalary';
+import { BonusPlan } from '@/pages/BonusPlan';
 // 批次 8 · 其余模块 + SaaS 运营
 import { RecruitBoard } from '@/pages/RecruitBoard';
 import { InterviewBank } from '@/pages/InterviewBank';
@@ -81,6 +83,7 @@ import { PlatformBoard } from '@/pages/PlatformBoard';
 import { WsTenant } from '@/pages/WsTenant';
 import { WsPlatform } from '@/pages/WsPlatform';
 import { PerfStandards } from '@/pages/PerfStandards';
+import { RoleAdmin } from '@/pages/RoleAdmin';
 // 批次 9 · 数据中枢 + 应用中心容器
 import {
   AppContainer,
@@ -193,6 +196,8 @@ export function AppRoutes() {
           <Route path="salary-plan" element={<SalaryPlan />} />
           <Route path="salary-approve" element={<SalaryApprove />} />
           <Route path="salary-report" element={<SalaryReport />} />
+          <Route path="my-salary" element={<MySalary />} />
+          <Route path="bonus-plan" element={<BonusPlan />} />
           {/* 批次 8 · 其余模块 + SaaS 运营 */}
           <Route path="recruit-board" element={<RecruitBoard />} />
           <Route path="interview-bank" element={<InterviewBank />} />
@@ -207,6 +212,7 @@ export function AppRoutes() {
           <Route path="ws-tenant" element={<WsTenant />} />
           <Route path="ws-platform" element={<WsPlatform />} />
           <Route path="perf-standards" element={<PerfStandards />} />
+          <Route path="role-admin" element={<RoleAdmin />} />
           {/* 批次 9 · 数据中枢 + 应用中心容器 */}
           <Route path="hub-standards" element={<AppContainer def={HUB_STANDARDS} />} />
           <Route path="hub-perf-standards" element={<AppContainer def={HUB_PERF_STANDARDS} />} />

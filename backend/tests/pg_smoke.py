@@ -11,7 +11,12 @@ from sqlalchemy import select
 from app.core.security import hash_password
 from app.database import SessionLocal, get_db
 from app.main import create_app
-from app.models.user import Role, Tenant, User
+from app.models.role_def import TenantRole
+from app.models.user import Role, Tenant, User, custom_role_ref
+from app.services.role_service import (
+    ensure_preset_all_hr,
+    set_active_role,
+)
 
 PASSWORD = "Passw0rd!"
 
@@ -21,11 +26,15 @@ tenant = Tenant(name="冒烟租户")
 session.add(tenant)
 session.flush()
 
+preset = ensure_preset_all_hr(session, tenant.id)
+all_hr_ref = custom_role_ref(preset.id)
+
 hr = User(
     tenant_id=tenant.id,
     email="smoke-hr@example.test",
     name="冒烟HR",
-    role=Role.HR,
+    role=Role.EMPLOYEE,
+    roles=[Role.EMPLOYEE.value, all_hr_ref],
     hashed_password=hash_password(PASSWORD),
 )
 employee = User(
@@ -36,6 +45,8 @@ employee = User(
     hashed_password=hash_password(PASSWORD),
 )
 session.add_all([hr, employee])
+session.flush()
+set_active_role(session, tenant.id, hr.id, all_hr_ref)
 session.commit()
 
 app = create_app()
@@ -54,7 +65,10 @@ try:
 
     # /me 走 PG
     me = client.get("/api/v1/me", headers=headers)
-    assert me.status_code == 200 and me.json()["role"] == "hr", me.text
+    assert (
+        me.status_code == 200
+        and me.json()["active_role_ref"] == all_hr_ref
+    ), me.text
 
     # RBAC：HR 可见用户列表
     users_resp = client.get("/api/v1/users", headers=headers)
@@ -83,6 +97,11 @@ finally:
         select(User).where(User.tenant_id == tenant.id)
     ).all():
         session.delete(u)
+    session.commit()
+    for role in session.scalars(
+        select(TenantRole).where(TenantRole.tenant_id == tenant.id)
+    ).all():
+        session.delete(role)
     session.commit()
     session.delete(tenant)
     session.commit()
