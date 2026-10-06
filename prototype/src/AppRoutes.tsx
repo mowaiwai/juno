@@ -66,6 +66,7 @@ import { Willingness } from '@/pages/Willingness';
 import { TalentPool } from '@/pages/TalentPool';
 import { AbRoles } from '@/pages/AbRoles';
 import { PoolTraining } from '@/pages/PoolTraining';
+import { TalentPipeline } from '@/pages/TalentPipeline';
 // 批次 7 · 工资与调薪
 import { SalaryTable } from '@/pages/SalaryTable';
 import { MarketData } from '@/pages/MarketData';
@@ -198,6 +199,7 @@ export function AppRoutes() {
           <Route path="risk-warning" element={<RiskWarning />} />
           <Route path="willingness" element={<Willingness />} />
           <Route path="talent-pool" element={<TalentPool />} />
+          <Route path="talent-pipeline" element={<TalentPipeline />} />
           <Route path="ab-roles" element={<AbRoles />} />
           <Route path="pool-training" element={<PoolTraining />} />
           {/* 批次 7 · 工资与调薪 */}

@@ -56,6 +56,7 @@ import { RiskWarning } from '@/pages/RiskWarning';
 import { Willingness } from '@/pages/Willingness';
 import { AbRoles } from '@/pages/AbRoles';
 import { TalentPool } from '@/pages/TalentPool';
+import { TalentPipeline } from '@/pages/TalentPipeline';
 import { PoolTraining } from '@/pages/PoolTraining';
 import { SalaryTable } from '@/pages/SalaryTable';
 import { MarketData } from '@/pages/MarketData';
@@ -248,6 +249,7 @@ export const APP_POOL: AppDef = {
   title: '人才梯队建设',
   wheel: '消费：继任者计划 · 员工画像库 → 反哺：员工画像库 · 人才发展',
   tabs: [
+    { key: 'pipeline', label: '梯队建设', pageKey: 'talent-pipeline', component: TalentPipeline },
     { key: 'pool', label: '梯队池', pageKey: 'talent-pool', component: TalentPool },
     { key: 'training', label: '培养跟踪', pageKey: 'pool-training', component: PoolTraining },
   ],

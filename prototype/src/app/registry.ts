@@ -114,6 +114,7 @@ export const pageRegistry: PageMeta[] = [
   // 意愿/AB 角加 manager、hrbp
   { key: 'willingness', title: '意愿确认', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre', 'manager', 'hrbp'], depth: '●', done: true, hideInNav: true },
   { key: 'talent-pool', title: '梯队池管理', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre'], depth: '◐', done: true, hideInNav: true },
+  { key: 'talent-pipeline', title: '人才梯队建设', group: '继任与梯队', batch: 10, roles: ['hr_coe_cadre', 'hr_coe_otd', 'hr_coe_perf', 'exec'], depth: '●', done: true, hideInNav: true, note: 'P3 梯队图 + 厚度/断层率/流动率 + 后备识别 + 断层预警 + AI 培养计划，已对接真实 API' },
   { key: 'ab-roles', title: 'AB 角配置', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre', 'manager', 'hrbp'], depth: '◐', done: true, hideInNav: true },
   { key: 'pool-training', title: '培养跟踪', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre'], depth: '○', done: true, hideInNav: true },
 
