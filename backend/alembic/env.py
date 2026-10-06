@@ -30,6 +30,7 @@ import app.models.perf  # noqa: F401
 import app.models.compensation  # noqa: F401
 import app.models.match  # noqa: F401
 import app.models.exam  # noqa: F401
+import app.models.structure_gap  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

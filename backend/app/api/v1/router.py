@@ -37,6 +37,7 @@ from app.api.v1.endpoints import (
     review,
     roles,
     standard_sets,
+    structure_gap,
     tenant_level_mapping,
     users,
 )
@@ -83,6 +84,7 @@ router.include_router(recruit.router)
 router.include_router(gaps.router)
 router.include_router(match.router)
 router.include_router(org_diagnosis.router)
+router.include_router(structure_gap.router)
 router.include_router(org.router)
 router.include_router(comp.router)
 router.include_router(perf.router)
