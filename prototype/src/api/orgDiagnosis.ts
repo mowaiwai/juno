@@ -1,6 +1,7 @@
 /** 组织诊断接口。 */
 import { api } from './client';
 import { USE_MOCK } from './config';
+import { employees as mockEmployees } from '@/mock/people';
 import {
   deptStructures as mockDeptStructures,
   gapWarnings as mockGapWarnings,
@@ -160,6 +161,147 @@ const mockCandToOut = (m: TeamCandidate): TeamCandidateOut => ({
   missing_dims: [],
 });
 
+// ============ 模块五 P3：结构优化类型 ============
+
+export interface ClassificationOut {
+  employee_id: string;
+  name: string;
+  dept_name: string;
+  position: string;
+  sequence: string;
+  grade: string;
+  category: string;
+  category_label: string;
+  perf_score: number | null;
+  ability_score: number | null;
+  willingness: string;
+  reason: string;
+}
+
+export interface ClassificationSummary {
+  core: number;
+  competent: number;
+  transformable: number;
+  optimize: number;
+  unclassified: number;
+  total: number;
+}
+
+export interface DensityOut {
+  total: number;
+  core_count: number;
+  core_ratio: number;
+  sequence_dist: Record<string, number>;
+  level_dist: Record<string, number>;
+  shape: string;
+  shape_label: string;
+  mid_ratio: number;
+  high_potential: number;
+  risk_count: number;
+}
+
+export interface ImbalanceItem {
+  sequence: string;
+  level_order: number;
+  level_name: string;
+  type: string;
+  type_label: string;
+  detail: string;
+}
+
+export interface OptimizeAdviceIn {
+  focus?: string;
+}
+
+export interface OptimizeAdviceOut {
+  advice: string;
+  source: string;
+  generated_at: string;
+}
+
+// ============ Mock 数据 ============
+
+const _PERF_MAP: Record<string, number> = { S: 95, A: 90, B: 80, C: 70, D: 60 };
+
+function _mockClassify(perf: number | null, ability: number | null): { category: string; category_label: string; reason: string } {
+  if (perf === null && ability === null) return { category: 'unclassified', category_label: '未分类', reason: '数据缺失' };
+  const p = perf ?? 0;
+  const a = ability ?? 0;
+  if (p >= 85 && a >= 80) return { category: 'core', category_label: '核心', reason: `绩效 ${p} ≥ 85 且能力 ${a} ≥ 80` };
+  if (p >= 75 && a >= 70) return { category: 'competent', category_label: '胜任', reason: `绩效 ${p} ≥ 75 且能力 ${a} ≥ 70` };
+  if (p >= 70 && a >= 60) return { category: 'transformable', category_label: '可转型', reason: `绩效 ${p} ≥ 70 且能力 ${a} ≥ 60` };
+  return { category: 'optimize', category_label: '待优化', reason: `绩效 ${p} < 70 或能力 ${a} < 60` };
+}
+
+function _mockClassification(): ClassificationOut[] {
+  return mockEmployees.map((e) => {
+    const perf = _PERF_MAP[e.perf] ?? null;
+    const ability = e.potential === 'HIGH' ? 88 : e.potential === 'MID' ? 76 : 62;
+    const { category, category_label, reason } = _mockClassify(perf, ability);
+    return {
+      employee_id: e.id,
+      name: e.name,
+      dept_name: e.deptId,
+      position: e.position,
+      sequence: e.sequence,
+      grade: e.grade,
+      category,
+      category_label,
+      perf_score: perf,
+      ability_score: ability,
+      willingness: 'none',
+      reason,
+    };
+  });
+}
+
+function _mockDensity(): DensityOut {
+  const total = mockEmployees.length;
+  const coreCount = _mockClassification().filter((c) => c.category === 'core').length;
+  const seqDist: Record<string, number> = {};
+  const levelDist: Record<string, number> = {};
+  for (const e of mockEmployees) {
+    seqDist[e.sequence] = (seqDist[e.sequence] || 0) + 1;
+    const num = parseInt(e.grade.slice(1), 10);
+    if (!Number.isNaN(num)) {
+      const lvl = e.sequence === 'MGT' ? (num <= 2 ? 3 : num === 3 ? 4 : num === 4 ? 5 : 6) : num;
+      levelDist[String(lvl)] = (levelDist[String(lvl)] || 0) + 1;
+    }
+  }
+  const midCount = mockEmployees.filter((e) => {
+    const num = parseInt(e.grade.slice(1), 10);
+    return num >= 3 && num <= 5;
+  }).length;
+  return {
+    total,
+    core_count: coreCount,
+    core_ratio: total ? Math.round((coreCount / total) * 100) / 100 : 0,
+    sequence_dist: seqDist,
+    level_dist: levelDist,
+    shape: midCount / total < 0.3 ? 'dumbbell' : midCount / total > 0.5 ? 'diamond' : 'pyramid',
+    shape_label: midCount / total < 0.3 ? '哑铃型' : midCount / total > 0.5 ? '钻石型' : '金字塔型',
+    mid_ratio: total ? Math.round((midCount / total) * 100) / 100 : 0,
+    high_potential: mockEmployees.filter((e) => e.potential === 'HIGH').length,
+    risk_count: mockEmployees.filter((e) => e.perf === 'D').length,
+  };
+}
+
+function _mockImbalance(): ImbalanceItem[] {
+  const items: ImbalanceItem[] = [];
+  const density = _mockDensity();
+  const standards: Record<string, number> = { SW: 11, ENG: 8, OP: 15, MGT: 15, SAL: 7, PUR: 5, HR: 3, OPS: 3 };
+  for (const [seq, demand] of Object.entries(standards)) {
+    const supply = density.sequence_dist[seq] || 0;
+    const gap = supply - demand;
+    if (gap < -0.5) {
+      items.push({ sequence: seq, level_order: 0, level_name: '', type: 'shortage', type_label: '缺口', detail: `${seq} 序列：需求 ${demand}，在岗 ${supply}，缺 ${Math.abs(gap)} 人` });
+    } else if (gap > 0.5) {
+      items.push({ sequence: seq, level_order: 0, level_name: '', type: 'surplus', type_label: '冗余', detail: `${seq} 序列：需求 ${demand}，在岗 ${supply}，余 ${gap} 人` });
+    }
+  }
+  return items;
+}
+
 // ============ API ============
 
 export const orgApi = {
@@ -195,5 +337,49 @@ export const orgApi = {
       return Promise.resolve(mockMatchCandidates(proj).map(mockCandToOut));
     }
     return api.post<TeamCandidateOut[]>('/match/project-team', body);
+  },
+
+  // ============ 模块五 P3：结构优化 ============
+
+  classification: (): Promise<ClassificationOut[]> => {
+    if (USE_MOCK) return Promise.resolve(_mockClassification());
+    return api.get<ClassificationOut[]>('/org/classification');
+  },
+
+  classificationSummary: (): Promise<ClassificationSummary> => {
+    if (USE_MOCK) {
+      const items = _mockClassification();
+      const summary: ClassificationSummary = { core: 0, competent: 0, transformable: 0, optimize: 0, unclassified: 0, total: items.length };
+      for (const it of items) {
+        if (it.category === 'core') summary.core++;
+        else if (it.category === 'competent') summary.competent++;
+        else if (it.category === 'transformable') summary.transformable++;
+        else if (it.category === 'optimize') summary.optimize++;
+        else summary.unclassified++;
+      }
+      return Promise.resolve(summary);
+    }
+    return api.get<ClassificationSummary>('/org/classification/summary');
+  },
+
+  density: (): Promise<DensityOut> => {
+    if (USE_MOCK) return Promise.resolve(_mockDensity());
+    return api.get<DensityOut>('/org/density');
+  },
+
+  imbalance: (): Promise<ImbalanceItem[]> => {
+    if (USE_MOCK) return Promise.resolve(_mockImbalance());
+    return api.get<ImbalanceItem[]>('/org/imbalance');
+  },
+
+  optimizeAdvice: (body: OptimizeAdviceIn): Promise<OptimizeAdviceOut> => {
+    if (USE_MOCK) {
+      return Promise.resolve({
+        advice: '基于当前数据：1）保留激励核心人才，防止流失；2）对可转型员工制定 6 个月培养计划；3）待优化员工启动 PIP 或调岗评估；4）针对缺口层级优先招聘，同时内部选拔培养。',
+        source: 'rule_based',
+        generated_at: new Date().toISOString(),
+      });
+    }
+    return api.post<OptimizeAdviceOut>('/org/optimize-advice', body);
   },
 };

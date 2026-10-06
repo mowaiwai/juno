@@ -84,6 +84,7 @@ export const pageRegistry: PageMeta[] = [
   // 液态组队按语义归干部管理
   { key: 'liquid-team', title: '液态组队', group: '人才盘点', batch: 4, roles: ['hr_coe_cadre', 'manager', 'exec'], depth: '◐', done: true, hideInNav: true },
   { key: 'gap-forecast', title: '缺口预测', group: '人才盘点', batch: 4, roles: [...TALENT_COE, 'exec', 'manager'], depth: '●', done: true, hideInNav: true, note: 'P3 已对接真实 API（结构优化容器 tab）' },
+  { key: 'density-dashboard', title: '人才密度仪表盘', group: '人才盘点', batch: 10, roles: [...TALENT_COE, 'exec', 'manager'], depth: '●', done: true, hideInNav: true, note: 'P3 四分类 + 密度 + 冗余/缺口 + AI 建议' },
 
   // ============ 批次 5 · 差距 · 发展 · 绩效（已并入容器） ============
   // 差距分析/动作路由/IDP/辅导/改进计划：cadre、perf、otd、hrbp、manager

@@ -49,6 +49,7 @@ import { MyGap } from '@/pages/MyGap';
 import { GapWarning } from '@/pages/GapWarning';
 import { LiquidTeam } from '@/pages/LiquidTeam';
 import { GapForecast } from '@/pages/GapForecast';
+import { DensityDashboard } from '@/pages/DensityDashboard';
 import { CorePositions } from '@/pages/CorePositions';
 import { SuccessionMatrix } from '@/pages/SuccessionMatrix';
 import { RiskWarning } from '@/pages/RiskWarning';
@@ -225,6 +226,7 @@ export const APP_STRUCTURE_OPT: AppDef = {
     { key: 'warning', label: '断层预警', pageKey: 'gap-warning', component: GapWarning },
     { key: 'liquid', label: '液态组队', pageKey: 'liquid-team', component: LiquidTeam },
     { key: 'forecast', label: '缺口预测', pageKey: 'gap-forecast', component: GapForecast },
+    { key: 'density', label: '人才密度', pageKey: 'density-dashboard', component: DensityDashboard },
   ],
 };
 
