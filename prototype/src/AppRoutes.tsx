@@ -43,6 +43,7 @@ import { GapWarning } from '@/pages/GapWarning';
 import { LiquidTeam } from '@/pages/LiquidTeam';
 import { GapForecast } from '@/pages/GapForecast';
 import { DensityDashboard } from '@/pages/DensityDashboard';
+import { ExecutiveDashboard } from '@/pages/ExecutiveDashboard';
 // 批次 5 · 差距 · 发展 · 绩效
 import { GapBoard } from '@/pages/GapBoard';
 import { GapAction } from '@/pages/GapAction';
@@ -178,6 +179,7 @@ export function AppRoutes() {
           <Route path="liquid-team" element={<LiquidTeam />} />
           <Route path="gap-forecast" element={<GapForecast />} />
           <Route path="density-dashboard" element={<DensityDashboard />} />
+          <Route path="executive-dashboard" element={<ExecutiveDashboard />} />
           {/* 批次 5 · 差距 · 发展 · 绩效 */}
           <Route path="gap-board" element={<GapBoard />} />
           <Route path="gap-action" element={<GapAction />} />

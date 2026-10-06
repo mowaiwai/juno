@@ -163,7 +163,8 @@ export const pageRegistry: PageMeta[] = [
   { key: 'app-pool', title: '人才梯队建设', group: '应用中心', batch: 9, roles: ['hr_coe_cadre'], depth: '◐', done: true, note: 'mock' },
   { key: 'app-salary', title: '薪酬福利管理', group: '应用中心', batch: 9, roles: ['hr_coe_comp', 'exec'], depth: '○', done: true, note: 'mock；exec 仅审批，薪资金额掩码' },
   { key: 'app-nine-grid', title: '人才九宫格动态管理', group: '应用中心', batch: 9, roles: [...TALENT_COE, 'exec', 'manager', 'tenant_admin'], depth: '●', done: true, note: '盘点全流程已对接真实 API' },
-  { key: 'app-structure-map', title: '人才结构图', group: '应用中心', batch: 9, roles: [...TALENT_COE, 'exec'], depth: '●', done: true, note: 'mock' },
+  { key: 'app-structure-map', title: '人才结构图', group: '应用中心', batch: 9, roles: [...TALENT_COE, 'exec'], depth: '●', done: true, note: 'P3 已对接三图联动决策大屏' },
+  { key: 'executive-dashboard', title: '高层决策大屏', group: '人才盘点', batch: 10, roles: [...TALENT_COE, 'exec'], depth: '●', done: true, hideInNav: true, note: 'P3 战略-组织-人才联动 + 缺口热力 + 梯队健康 + 策略建议' },
 ];
 
 export function getPage(key: string): PageMeta | undefined {

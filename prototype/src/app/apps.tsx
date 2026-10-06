@@ -70,6 +70,7 @@ import { NineGrid } from '@/pages/NineGrid';
 import { GridTrack } from '@/pages/GridTrack';
 import { GridStrategy } from '@/pages/GridStrategy';
 import { StructureViz } from '@/pages/StructureViz';
+import { ExecutiveDashboard } from '@/pages/ExecutiveDashboard';
 
 export interface AppTabDef {
   /** tab key，同时作为 ?tab= 直达参数 */
@@ -288,6 +289,7 @@ export const APP_STRUCTURE_MAP: AppDef = {
   wheel: '消费：组织管理库 · 员工画像库 → 反哺：关键指标看板',
   tabs: [
     { key: 'viz', label: '结构可视化', pageKey: 'structure-viz', component: StructureViz },
+    { key: 'executive', label: '决策大屏', pageKey: 'executive-dashboard', component: ExecutiveDashboard },
   ],
 };
 

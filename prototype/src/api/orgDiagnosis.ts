@@ -382,4 +382,100 @@ export const orgApi = {
     }
     return api.post<OptimizeAdviceOut>('/org/optimize-advice', body);
   },
+
+  // ============ 模块十 P3：高层决策大屏 ============
+
+  executiveDashboard: (): Promise<ExecutiveDashboardOut> => {
+    if (USE_MOCK) return Promise.resolve(_mockExecutiveDashboard());
+    return api.get<ExecutiveDashboardOut>('/org/executive-dashboard');
+  },
 };
+
+// ============ 模块十 P3：决策大屏类型与 Mock ============
+
+export interface ExecutiveDashboardOut {
+  year: number;
+  strategy: { initiative: string; talent_support: number | string; owner: string; note: string }[];
+  org: {
+    departments: number;
+    key_positions: number;
+    succession_coverage: number;
+    org_changes: number;
+    shape_label: string;
+    mid_ratio: number;
+  };
+  talent: {
+    p4_plus_ratio: number;
+    high_potential_count: number;
+    risk_count: number;
+    scatter: { emp_id: string; x: number; y: number; size: number }[];
+    willingness_anomaly: string[];
+    core_count: number;
+    core_ratio: number;
+    classification: {
+      core: number;
+      competent: number;
+      transformable: number;
+      optimize: number;
+      unclassified: number;
+      total: number;
+    };
+  };
+  gap_heatmap: {
+    sequence: string;
+    level_order: number;
+    level_name: string;
+    demand: number;
+    supply_total: number;
+    gap: number;
+    severity: string;
+  }[];
+  gap_summary: {
+    total_demand: number;
+    total_supply: number;
+    total_gap: number;
+    shortage_cells: number;
+    surplus_cells: number;
+  };
+  pipeline_health: {
+    thickness: number | null;
+    gap_rate: number;
+    flow_rate: number;
+    active_pool: number;
+  };
+  actions: { type: string; type_label: string; title: string; detail: string }[];
+}
+
+function _mockExecutiveDashboard(): ExecutiveDashboardOut {
+  return {
+    year: new Date().getFullYear(),
+    strategy: [
+      { initiative: '海外市场拓展', talent_support: '需 5 名供应链专家', owner: '供应链 VP', note: 'Q2 启动' },
+      { initiative: '数字化研发', talent_support: '补充 3 名算法工程师', owner: '研发总监', note: '全年推进' },
+      { initiative: '组织精益化', talent_support: '培养 10 名精益带头人', owner: '制造总监', note: 'Q3 试点' },
+    ],
+    org: { departments: 5, key_positions: 8, succession_coverage: 0.72, org_changes: 3, shape_label: '金字塔型', mid_ratio: 0.38 },
+    talent: {
+      p4_plus_ratio: 0.42,
+      high_potential_count: 6,
+      risk_count: 2,
+      scatter: [],
+      willingness_anomaly: [],
+      core_count: 12,
+      core_ratio: 0.18,
+      classification: { core: 12, competent: 38, transformable: 10, optimize: 4, unclassified: 2, total: 66 },
+    },
+    gap_heatmap: [
+      { sequence: 'SW', level_order: 3, level_name: '骨干层', demand: 8, supply_total: 5.5, gap: 2.5, severity: 'shortage' },
+      { sequence: 'SW', level_order: 4, level_name: '精英层', demand: 4, supply_total: 2, gap: 2.0, severity: 'shortage' },
+      { sequence: 'MGT', level_order: 5, level_name: '事业单位经营层', demand: 2, supply_total: 1, gap: 1.0, severity: 'shortage' },
+    ],
+    gap_summary: { total_demand: 49, total_supply: 42.5, total_gap: 6.5, shortage_cells: 3, surplus_cells: 1 },
+    pipeline_health: { thickness: 0.85, gap_rate: 0.6, flow_rate: 0.12, active_pool: 18 },
+    actions: [
+      { type: 'recruit', type_label: '招聘', title: 'SW·骨干层 招聘补位', detail: '缺口 2.5 人，建议外部招聘与内部晋升双通道' },
+      { type: 'develop', type_label: '发展', title: '断层层级梯队加速', detail: '3 个关键层级储备不足，建议从盘点高潜中选拔入池并配 AI 培养计划' },
+      { type: 'optimize', type_label: '优化', title: '待优化员工结构调优', detail: '4 名员工落入待优化象限，建议启动 PIP 或调岗评估' },
+    ],
+  };
+}
