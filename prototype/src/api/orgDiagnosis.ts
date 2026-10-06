@@ -78,10 +78,14 @@ export interface TeamCandidateOut {
   employee_id: string;
   name: string;
   position: string;
+  /** 匹配引擎分（0-100，一位小数） */
   match_score: number;
+  /** willing / unwilling / unconfirmed（mock 旧数据可能为 high/mid/low） */
   willingness: string;
+  /** ready / developing / gap（mock 旧数据可能为 6m/1y） */
   readiness: string;
   reason: string;
+  missing_dims: string[];
 }
 
 // ============ Mock 转换 ============
@@ -153,6 +157,7 @@ const mockCandToOut = (m: TeamCandidate): TeamCandidateOut => ({
   willingness: m.willingness,
   readiness: m.readiness,
   reason: m.reason,
+  missing_dims: [],
 });
 
 // ============ API ============
@@ -183,11 +188,12 @@ export const orgApi = {
     return api.get<LiquidProjectOut[]>('/org/liquid-projects');
   },
 
+  /** 项目组队：走统一匹配引擎端点（旧 /org/project-team 后端保留兼容） */
   projectTeam: (body: ProjectTeamIn): Promise<TeamCandidateOut[]> => {
     if (USE_MOCK) {
       const proj = mockLiquidProjects[0];
       return Promise.resolve(mockMatchCandidates(proj).map(mockCandToOut));
     }
-    return api.post<TeamCandidateOut[]>('/org/project-team', body);
+    return api.post<TeamCandidateOut[]>('/match/project-team', body);
   },
 };

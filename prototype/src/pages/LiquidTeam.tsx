@@ -2,10 +2,24 @@ import { useEffect, useState } from 'react';
 import { Button, Card, Col, Progress, Row, Select, Space, Spin, Tag, message } from 'antd';
 import { TeamOutlined } from '@ant-design/icons';
 import { orgApi, type LiquidProjectOut, type TeamCandidateOut } from '@/api/orgDiagnosis';
+import { DIM_LABEL } from '@/api/match';
 
-const WILLINGNESS_COLOR: Record<string, string> = { high: 'var(--sage)', mid: 'var(--ochre)', low: 'var(--danger)' };
-const WILLINGNESS_LABEL: Record<string, string> = { high: '意愿高', mid: '意愿中', low: '意愿低' };
-const READINESS_LABEL: Record<string, string> = { ready: '可立即入组', '6m': '6 个月内就绪', '1y': '1 年内就绪' };
+// 统一匹配引擎口径：willing/unwilling/unconfirmed；mock 旧数据兼容 high/mid/low
+const WILLINGNESS_COLOR: Record<string, string> = {
+  willing: 'var(--sage)', unconfirmed: 'var(--ochre)', unwilling: 'var(--danger)',
+  high: 'var(--sage)', mid: 'var(--ochre)', low: 'var(--danger)',
+};
+const WILLINGNESS_LABEL: Record<string, string> = {
+  willing: '愿意', unconfirmed: '意愿未确认', unwilling: '不愿意',
+  high: '意愿高', mid: '意愿中', low: '意愿低',
+};
+const READINESS_LABEL: Record<string, string> = {
+  ready: '可立即入组', developing: '待培养', gap: '有差距',
+  '6m': '6 个月内就绪', '1y': '1 年内就绪',
+};
+const READINESS_COLOR: Record<string, string> = {
+  ready: 'var(--sage)', developing: 'var(--ochre)', gap: 'var(--danger)',
+};
 
 export function LiquidTeam() {
   const [projects, setProjects] = useState<LiquidProjectOut[]>([]);
@@ -112,17 +126,20 @@ export function LiquidTeam() {
                         </div>
                       </Space>
                       <div style={{ textAlign: 'right', width: 200 }}>
-                        <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--clay)' }}>{c.match_score}</div>
+                        <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--clay)' }}>{c.match_score.toFixed(1)}</div>
                         <Progress percent={c.match_score} showInfo={false} size="small" strokeColor="var(--clay)" style={{ width: '100%' }} />
                       </div>
                     </Space>
-                    <Space style={{ marginTop: 8 }} wrap>
-                      <Tag style={{ borderRadius: 6, background: WILLINGNESS_COLOR[c.willingness] + '22', color: WILLINGNESS_COLOR[c.willingness], borderColor: 'transparent' }}>
-                        {WILLINGNESS_LABEL[c.willingness]}
+                    <Space style={{ marginTop: 8 }} wrap size={4}>
+                      <Tag style={{ borderRadius: 6, background: (WILLINGNESS_COLOR[c.willingness] ?? 'var(--ink-4)') + '22', color: WILLINGNESS_COLOR[c.willingness] ?? 'var(--ink-4)', borderColor: 'transparent' }}>
+                        {WILLINGNESS_LABEL[c.willingness] ?? c.willingness}
                       </Tag>
-                      <Tag style={{ borderRadius: 6, background: 'var(--teal-soft)', color: 'var(--teal)', borderColor: 'transparent' }}>
-                        {READINESS_LABEL[c.readiness]}
+                      <Tag style={{ borderRadius: 6, background: (READINESS_COLOR[c.readiness] ?? 'var(--teal)') + '22', color: READINESS_COLOR[c.readiness] ?? 'var(--teal)', borderColor: 'transparent' }}>
+                        {READINESS_LABEL[c.readiness] ?? c.readiness}
                       </Tag>
+                      {(c.missing_dims ?? []).map((d) => (
+                        <Tag key={d} style={{ borderRadius: 6 }}>缺 {DIM_LABEL[d as keyof typeof DIM_LABEL] ?? d}</Tag>
+                      ))}
                       <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{c.reason}</span>
                     </Space>
                   </div>

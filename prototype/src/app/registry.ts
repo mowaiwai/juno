@@ -88,6 +88,10 @@ export const pageRegistry: PageMeta[] = [
   // 差距分析/动作路由/IDP/辅导/改进计划：cadre、perf、otd、hrbp、manager
   { key: 'gap-board', title: '差距分析看板', group: '人岗匹配', batch: 5, roles: ['manager', ...TALENT_COE, 'hrbp'], depth: '●', done: true, hideInNav: true },
   { key: 'gap-action', title: '差距详情与动作路由', group: '人岗匹配', batch: 5, roles: ['manager', ...TALENT_COE, 'hrbp'], depth: '●', done: true, hideInNav: true },
+  // 统一匹配引擎（P3）：热力图/推荐复用 gap.manage 角色面；员工可查本人推荐
+  { key: 'match-heatmap', title: '差距热力图', group: '人岗匹配', batch: 10, roles: ['manager', ...TALENT_COE, 'hrbp', 'tenant_admin'], depth: '●', done: true, hideInNav: true, note: '已对接 /match/heatmap' },
+  { key: 'match-recommend', title: '双向推荐', group: '人岗匹配', batch: 10, roles: ['employee', 'manager', ...TALENT_COE, 'hrbp', 'tenant_admin'], depth: '●', done: true, hideInNav: true, note: '一人多岗/一岗多人；员工仅查本人' },
+  { key: 'match-config', title: '匹配配置', group: '人岗匹配', batch: 10, roles: [...TALENT_COE, 'hrbp', 'tenant_admin'], depth: '●', done: true, hideInNav: true, note: '租户权重/基准/阈值，已对接 /match/config' },
   { key: 'initial-inventory', title: '人才初盘', group: '人岗匹配', batch: 5, roles: [...TALENT_COE, 'hrbp'], depth: '◐', done: true, hideInNav: true },
   // 学习/培训类归 OTD
   { key: 'learn-map', title: '学习地图', group: '人才发展', batch: 5, roles: ['employee', 'hr_coe_otd'], depth: '◐', done: true, hideInNav: true },

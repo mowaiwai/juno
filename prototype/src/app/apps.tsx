@@ -41,6 +41,9 @@ import { RecruitBoard } from '@/pages/RecruitBoard';
 import { InterviewBank } from '@/pages/InterviewBank';
 import { GapBoard } from '@/pages/GapBoard';
 import { GapAction } from '@/pages/GapAction';
+import { MatchHeatmap } from '@/pages/MatchHeatmap';
+import { MatchRecommend } from '@/pages/MatchRecommend';
+import { MatchConfig } from '@/pages/MatchConfig';
 import { InitialInventory } from '@/pages/InitialInventory';
 import { MyGap } from '@/pages/MyGap';
 import { GapWarning } from '@/pages/GapWarning';
@@ -204,6 +207,9 @@ export const APP_GAP: AppDef = {
   wheel: '消费：任职资格标准库 · 员工画像库 → 反哺：员工画像库 · 人才发展',
   tabs: [
     { key: 'board', label: '差距看板', pageKey: 'gap-board', component: GapBoard },
+    { key: 'heatmap', label: '差距热力图', pageKey: 'match-heatmap', component: MatchHeatmap },
+    { key: 'recommend', label: '双向推荐', pageKey: 'match-recommend', component: MatchRecommend },
+    { key: 'config', label: '匹配配置', pageKey: 'match-config', component: MatchConfig },
     { key: 'action', label: '差距动作', pageKey: 'gap-action', component: GapAction },
     { key: 'inventory', label: '人才初盘', pageKey: 'initial-inventory', component: InitialInventory },
     { key: 'my-gap', label: '我的差距', pageKey: 'my-gap', component: MyGap },

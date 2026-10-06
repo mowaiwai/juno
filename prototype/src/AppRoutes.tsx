@@ -44,6 +44,9 @@ import { LiquidTeam } from '@/pages/LiquidTeam';
 // 批次 5 · 差距 · 发展 · 绩效
 import { GapBoard } from '@/pages/GapBoard';
 import { GapAction } from '@/pages/GapAction';
+import { MatchHeatmap } from '@/pages/MatchHeatmap';
+import { MatchRecommend } from '@/pages/MatchRecommend';
+import { MatchConfig } from '@/pages/MatchConfig';
 import { InitialInventory } from '@/pages/InitialInventory';
 import { LearnMap } from '@/pages/LearnMap';
 import { ExamCenter } from '@/pages/ExamCenter';
@@ -173,6 +176,9 @@ export function AppRoutes() {
           {/* 批次 5 · 差距 · 发展 · 绩效 */}
           <Route path="gap-board" element={<GapBoard />} />
           <Route path="gap-action" element={<GapAction />} />
+          <Route path="match-heatmap" element={<MatchHeatmap />} />
+          <Route path="match-recommend" element={<MatchRecommend />} />
+          <Route path="match-config" element={<MatchConfig />} />
           <Route path="initial-inventory" element={<InitialInventory />} />
           <Route path="learn-map" element={<LearnMap />} />
           <Route path="exam-center" element={<ExamCenter />} />
