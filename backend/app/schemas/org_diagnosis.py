@@ -139,3 +139,36 @@ class OptimizeAdviceOut(BaseModel):
     advice: str  # AI 生成的优化建议文案
     source: str  # ai_generated / rule_based
     generated_at: str  # ISO 8601
+
+
+# ---------------------------------------------------------------------------
+# 模块十 P3：高层决策大屏（三图联动）
+# ---------------------------------------------------------------------------
+
+
+class ExecutiveDashboardOut(BaseModel):
+    """高层决策大屏：三图聚合 + 缺口热力 + 梯队健康 + 策略建议。
+
+    数据来源：
+    - 战略图：three-charts.strategy（本期 mock 战略举措）
+    - 组织图：three-charts.org + 密度
+    - 人才图：three-charts.talent + 四分类
+    - 缺口热力：structure-gap forecast cells（复用既有端点数据）
+    - 梯队健康：talent-pipeline health 三指标
+    - 策略建议：规则生成（AI 文案由前端触发 /org/optimize-advice）
+    """
+
+    year: int
+    # 战略图：战略举措 × 人才支撑
+    strategy: list[dict]
+    # 组织图：部门数 / 关键岗位 / 继任覆盖率 / 形状
+    org: dict
+    # 人才图：核心占比 / 高潜 / 风险人数 / 四分类汇总
+    talent: dict
+    # 缺口热力：sequence × level 缺口单元格（来自 gap-forecast）
+    gap_heatmap: list[dict]
+    gap_summary: dict
+    # 梯队健康三指标
+    pipeline_health: dict
+    # 策略建议（规则模板，供前端展示）
+    actions: list[dict]

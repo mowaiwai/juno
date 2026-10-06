@@ -18,6 +18,7 @@ from app.models.org_diagnosis import LiquidProject
 from app.models.profile import ProfileSnapshot
 from app.models.succession import (
     CorePosition,
+    PoolLevel,
     PoolStatus,
     SuccessionCandidate,
     TalentPool,
@@ -871,4 +872,137 @@ def org_optimize_advice(
         ),
         source="rule_based",
         generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 11. 高层决策大屏（模块十 P3）
+# ---------------------------------------------------------------------------
+
+
+@router.get("/org/executive-dashboard")
+def org_executive_dashboard(
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(get_principal),
+):
+    """三图联动决策大屏：聚合战略/组织/人才 + 缺口热力 + 梯队健康 + 策略。
+
+    权限：exec / COE / tenant_admin（复用 gap.manage + succession.manage 持点）。
+    """
+    from app.core.permissions import ScopeType
+    from app.schemas.org_diagnosis import ExecutiveDashboardOut
+    from app.services.structure_gap import compute_gap_forecast
+    from app.services.structure_gap_data import (
+        build_cell_inputs,
+        get_gap_config,
+        level_names,
+    )
+    from app.services.talent_pipeline import compute_health
+
+    user = principal.user
+    if not (
+        principal.can("gap.manage", "succession.manage", "inventory.calibrate")
+        or principal.scope_type == ScopeType.GLOBAL
+    ):
+        raise err(403, "forbidden", "当前角色无权查看决策大屏")
+
+    tenant_id = user.tenant_id
+    # 复用三图数据
+    three = org_three_charts(db=db, user=user)
+    # 密度
+    density = org_density(db=db, user=user)
+    # 四分类
+    classification = org_classification_summary(db=db, user=user)
+    # 缺口预测
+    factors, _ = get_gap_config(db, tenant_id)
+    cells, _unmapped = build_cell_inputs(db, tenant_id)
+    gap_result = compute_gap_forecast(cells, factors)
+    names = level_names(db)
+    gap_heatmap = [
+        {
+            "sequence": c.sequence,
+            "level_order": c.level_order,
+            "level_name": names.get(c.level_order, f"L{c.level_order}"),
+            "demand": c.demand,
+            "supply_total": c.supply_total,
+            "gap": c.gap,
+            "severity": c.severity,
+        }
+        for c in gap_result.cells
+        if c.severity != "balanced"
+    ]
+    # 梯队健康
+    pipeline = compute_health(db, tenant_id)
+
+    # 策略建议（规则生成）
+    actions: list[dict] = []
+    if gap_result.shortage_cells > 0:
+        top_short = sorted(
+            (c for c in gap_result.cells if c.severity == "shortage"),
+            key=lambda c: -c.gap,
+        )[:3]
+        for c in top_short:
+            actions.append({
+                "type": "recruit",
+                "type_label": "招聘",
+                "title": f"{c.sequence}·{names.get(c.level_order, f'L{c.level_order}')} 招聘补位",
+                "detail": f"缺口 {c.gap:.1f} 人，建议外部招聘与内部晋升双通道",
+            })
+    if pipeline["gap_levels"] > 0:
+        actions.append({
+            "type": "develop",
+            "type_label": "发展",
+            "title": "断层层级梯队加速",
+            "detail": (
+                f"{pipeline['gap_levels']} 个关键层级储备不足，"
+                "建议从盘点高潜中选拔入池并配 AI 培养计划"
+            ),
+        })
+    if classification.optimize > 0:
+        actions.append({
+            "type": "optimize",
+            "type_label": "优化",
+            "title": "待优化员工结构调优",
+            "detail": (
+                f"{classification.optimize} 名员工落入待优化象限，"
+                "建议启动 PIP 或调岗评估"
+            ),
+        })
+    if not actions:
+        actions.append({
+            "type": "stable",
+            "type_label": "保持",
+            "title": "结构健康",
+            "detail": "各项指标在阈值内，按既定节奏推进年度盘点与调薪",
+        })
+
+    return ExecutiveDashboardOut(
+        year=three.year,
+        strategy=three.strategy,
+        org={
+            **three.org,
+            "shape_label": density.shape_label,
+            "mid_ratio": density.mid_ratio,
+        },
+        talent={
+            **three.talent,
+            "core_count": density.core_count,
+            "core_ratio": density.core_ratio,
+            "classification": classification.model_dump(),
+        },
+        gap_heatmap=gap_heatmap,
+        gap_summary={
+            "total_demand": gap_result.total_demand,
+            "total_supply": gap_result.total_supply,
+            "total_gap": gap_result.total_gap,
+            "shortage_cells": gap_result.shortage_cells,
+            "surplus_cells": gap_result.surplus_cells,
+        },
+        pipeline_health={
+            "thickness": pipeline["thickness"],
+            "gap_rate": pipeline["gap_rate"],
+            "flow_rate": pipeline["flow_rate"],
+            "active_pool": pipeline["active_pool"],
+        },
+        actions=actions,
     )
