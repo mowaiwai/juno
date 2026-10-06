@@ -24,9 +24,15 @@ from app.models.succession import (
 )
 from app.models.user import User
 from app.schemas.org_diagnosis import (
+    ClassificationOut,
+    ClassificationSummary,
+    DensityOut,
     DeptStructureOut,
     GapWarningOut,
+    ImbalanceItem,
     LiquidProjectOut,
+    OptimizeAdviceIn,
+    OptimizeAdviceOut,
     ProjectTeamIn,
     TalentMapOut,
     TeamCandidateOut,
@@ -478,3 +484,391 @@ def org_project_team(
         )
         for c in candidates
     ]
+
+
+# ---------------------------------------------------------------------------
+# 7. 维度自动分类（核心/胜任/可转型/待优化）
+# ---------------------------------------------------------------------------
+
+_CATEGORY_LABELS = {
+    "core": "核心",
+    "competent": "胜任",
+    "transformable": "可转型",
+    "optimize": "待优化",
+}
+
+_CATEGORY_THRESHOLDS = {
+    "core": {"perf": 85, "ability": 80},
+    "competent": {"perf": 75, "ability": 70},
+    "transformable": {"perf": 70, "ability": 60},
+}
+
+
+def _classify(
+    perf: float | None,
+    ability: float | None,
+    willingness: str,
+) -> tuple[str, str]:
+    """按绩效×能力×意愿四分类，返回 (category, reason)。"""
+    if perf is None and ability is None:
+        return "unclassified", "绩效与能力数据均缺失，无法分类"
+    p = perf or 0
+    a = ability or 0
+    if p >= _CATEGORY_THRESHOLDS["core"]["perf"] and a >= _CATEGORY_THRESHOLDS["core"]["ability"]:
+        return "core", f"绩效 {p} ≥ 85 且能力 {a} ≥ 80"
+    if p >= _CATEGORY_THRESHOLDS["competent"]["perf"] and a >= _CATEGORY_THRESHOLDS["competent"]["ability"]:
+        return "competent", f"绩效 {p} ≥ 75 且能力 {a} ≥ 70"
+    if p >= _CATEGORY_THRESHOLDS["transformable"]["perf"] and a >= _CATEGORY_THRESHOLDS["transformable"]["ability"]:
+        return "transformable", f"绩效 {p} ≥ 70 且能力 {a} ≥ 60，可通过培养转型"
+    return "optimize", f"绩效 {p} < 70 或能力 {a} < 60，需重点关注"
+
+
+@router.get("/org/classification", response_model=list[ClassificationOut])
+def org_classification(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """全员四分类：核心/胜任/可转型/待优化。"""
+    tenant_id = user.tenant_id
+    emps = db.scalars(
+        select(Employee).where(
+            Employee.tenant_id == tenant_id,
+            Employee.is_active.is_(True),
+        )
+    ).all()
+    latest = _latest_snapshots(db, tenant_id)
+    will = _willingness_by_employee(db, tenant_id)
+
+    out: list[ClassificationOut] = []
+    for emp in emps:
+        pg = (emp.perf_grade or "").upper()
+        perf = float(_PERF_MAP.get(pg, 0)) if pg else None
+        ability = None
+        snap = latest.get(emp.id)
+        if snap:
+            for d in snap.dimensions:
+                if d.dimension_key == "ability" and d.score is not None:
+                    ability = d.score
+                    break
+        w = will.get(emp.id, "none")
+        cat, reason = _classify(perf, ability, w)
+        out.append(ClassificationOut(
+            employee_id=emp.id,
+            name=emp.name,
+            dept_name=_TOP_DEPTS.get(_top_dept_code(emp.dept_id), emp.dept_id or ""),
+            position=emp.position or "",
+            sequence=emp.sequence or "",
+            grade=emp.grade or "",
+            category=cat,
+            category_label=_CATEGORY_LABELS.get(cat, cat),
+            perf_score=perf,
+            ability_score=ability,
+            willingness=w,
+            reason=reason,
+        ))
+    return out
+
+
+@router.get("/org/classification/summary", response_model=ClassificationSummary)
+def org_classification_summary(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """四分类汇总计数。"""
+    items = org_classification(db=db, user=user)
+    summary = ClassificationSummary(total=len(items))
+    for it in items:
+        if it.category == "core":
+            summary.core += 1
+        elif it.category == "competent":
+            summary.competent += 1
+        elif it.category == "transformable":
+            summary.transformable += 1
+        elif it.category == "optimize":
+            summary.optimize += 1
+        else:
+            summary.unclassified += 1
+    return summary
+
+
+# ---------------------------------------------------------------------------
+# 8. 人才密度仪表盘
+# ---------------------------------------------------------------------------
+
+
+@router.get("/org/density", response_model=DensityOut)
+def org_density(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """人才密度：核心占比、序列/层级分布、形状识别。"""
+    tenant_id = user.tenant_id
+    emps = db.scalars(
+        select(Employee).where(
+            Employee.tenant_id == tenant_id,
+            Employee.is_active.is_(True),
+        )
+    ).all()
+    latest = _latest_snapshots(db, tenant_id)
+
+    # 四分类
+    will = _willingness_by_employee(db, tenant_id)
+    core_count = 0
+    for emp in emps:
+        pg = (emp.perf_grade or "").upper()
+        perf = float(_PERF_MAP.get(pg, 0)) if pg else None
+        ability = None
+        snap = latest.get(emp.id)
+        if snap:
+            for d in snap.dimensions:
+                if d.dimension_key == "ability" and d.score is not None:
+                    ability = d.score
+                    break
+        cat, _ = _classify(perf, ability, will.get(emp.id, "none"))
+        if cat == "core":
+            core_count += 1
+
+    # 序列分布
+    seq_dist: dict[str, int] = {}
+    for e in emps:
+        if e.sequence:
+            seq_dist[e.sequence] = seq_dist.get(e.sequence, 0) + 1
+
+    # 层级分布（复用 structure_gap 的 grade→level 映射）
+    from app.services.structure_gap_data import build_grade_level_map
+    grade_level = build_grade_level_map(db, tenant_id)
+    level_dist: dict[str, int] = {}
+    for e in emps:
+        lvl = grade_level.get(e.grade)
+        if lvl is not None:
+            key = str(lvl)
+            level_dist[key] = level_dist.get(key, 0) + 1
+
+    # 形状识别（复用已有逻辑）
+    grade_count: dict[str, int] = {}
+    for e in emps:
+        grade_count[e.grade] = grade_count.get(e.grade, 0) + 1
+    shape, shape_label, mid_ratio = _shape(grade_count, len(emps))
+
+    # 高潜（L1 池）
+    hp = db.scalar(
+        select(func.count(TalentPool.id)).where(
+            TalentPool.tenant_id == tenant_id,
+            TalentPool.status == PoolStatus.ACTIVE,
+            TalentPool.pool_level == PoolLevel.L1,
+        )
+    ) or 0
+
+    risk = sum(1 for e in emps if e.perf_grade and e.perf_grade.upper() == "D")
+
+    return DensityOut(
+        total=len(emps),
+        core_count=core_count,
+        core_ratio=round(core_count / len(emps), 2) if emps else 0.0,
+        sequence_dist=seq_dist,
+        level_dist=level_dist,
+        shape=shape,
+        shape_label=shape_label,
+        mid_ratio=mid_ratio,
+        high_potential=hp,
+        risk_count=risk,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 9. 冗余/缺口识别
+# ---------------------------------------------------------------------------
+
+
+@router.get("/org/imbalance", response_model=list[ImbalanceItem])
+def org_imbalance(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """冗余/缺口识别：对比编制与实际在岗，输出失衡项。"""
+    from app.services.structure_gap_data import (
+        build_grade_level_map,
+        get_gap_config,
+        list_headcounts,
+    )
+
+    tenant_id = user.tenant_id
+    emps = db.scalars(
+        select(Employee).where(
+            Employee.tenant_id == tenant_id,
+            Employee.is_active.is_(True),
+        )
+    ).all()
+
+    # 在岗统计
+    active_map: dict[str, int] = {}
+    grade_level = build_grade_level_map(db, tenant_id)
+    for e in emps:
+        lvl = grade_level.get(e.grade)
+        if lvl is not None:
+            key = f"{e.sequence}:{lvl}"
+            active_map[key] = active_map.get(key, 0) + 1
+
+    # 编制标准
+    standards_rows = list_headcounts(db, tenant_id)
+    standards = [
+        {"sequence": r.sequence, "level_order": r.level_order, "headcount": r.headcount}
+        for r in standards_rows
+    ]
+
+    # 梯队折算
+    factors, _ = get_gap_config(db, tenant_id)
+    pools = db.scalars(
+        select(TalentPool).where(
+            TalentPool.tenant_id == tenant_id,
+            TalentPool.status == PoolStatus.ACTIVE,
+        )
+    ).all()
+    grade_level = build_grade_level_map(db, tenant_id)
+    factor_map = {"L1": factors.l1, "L2": factors.l2, "L3": factors.l3}
+    pool_map: dict[str, float] = {}
+    for p in pools:
+        emp = db.get(Employee, p.employee_id)
+        if emp is None or not emp.is_active:
+            continue
+        lvl = grade_level.get(emp.grade)
+        if lvl is not None:
+            key = f"{emp.sequence}:{lvl}"
+            pool_map[key] = pool_map.get(key, 0) + factor_map.get(p.pool_level.value, 0.2)
+
+    items: list[ImbalanceItem] = []
+    all_keys = set(active_map.keys()) | set(
+        f"{s['sequence']}:{s['level_order']}" for s in standards
+    ) | set(pool_map.keys())
+
+    LEVEL_NAMES = ["基础层", "经验层", "骨干层", "精英层", "事业单位经营层", "集团经营层"]
+
+    for key in sorted(all_keys):
+        seq, lvl_str = key.split(":")
+        lvl = int(lvl_str)
+        demand = next(
+            (s["headcount"] for s in standards if s["sequence"] == seq and s["level_order"] == lvl),
+            0,
+        )
+        supply = active_map.get(key, 0) + pool_map.get(key, 0)
+        gap = supply - demand
+
+        if gap < -0.5:
+            items.append(ImbalanceItem(
+                sequence=seq,
+                level_order=lvl,
+                level_name=LEVEL_NAMES[lvl - 1] if lvl <= 6 else f"L{lvl}",
+                type="shortage",
+                type_label="缺口",
+                detail=f"{seq}·{LEVEL_NAMES[lvl - 1] if lvl <= 6 else f'L{lvl}'}：需求 {demand}，供给 {supply:.1f}，缺 {abs(gap):.1f} 人",
+            ))
+        elif gap > 0.5:
+            items.append(ImbalanceItem(
+                sequence=seq,
+                level_order=lvl,
+                level_name=LEVEL_NAMES[lvl - 1] if lvl <= 6 else f"L{lvl}",
+                type="surplus",
+                type_label="冗余",
+                detail=f"{seq}·{LEVEL_NAMES[lvl - 1] if lvl <= 6 else f'L{lvl}'}：需求 {demand}，供给 {supply:.1f}，余 {gap:.1f} 人",
+            ))
+
+    return items
+
+
+# ---------------------------------------------------------------------------
+# 10. AI 结构优化建议
+# ---------------------------------------------------------------------------
+
+
+@router.post("/org/optimize-advice", response_model=OptimizeAdviceOut)
+def org_optimize_advice(
+    body: OptimizeAdviceIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """AI 生成结构优化建议（LLM 调用）。"""
+    from app.services.ai import _ai_settings, _tenant_config
+    from app.services.llm import get_client
+    from app.config import settings
+
+    # 收集数据摘要
+    density = org_density(db=db, user=user)
+    imbalance = org_imbalance(db=db, user=user)
+    classification = org_classification_summary(db=db, user=user)
+
+    context = (
+        f"总人数 {density.total}，核心人才 {density.core_count}（{density.core_ratio * 100}%），"
+        f"形状 {density.shape_label}（中坚占比 {density.mid_ratio * 100}%）。"
+        f"四分类：核心 {classification.core} / 胜任 {classification.competent} / "
+        f"可转型 {classification.transformable} / 待优化 {classification.optimize} / "
+        f"未分类 {classification.unclassified}。"
+        f"序列分布：{density.sequence_dist}。"
+        f"层级分布：{density.level_dist}。"
+    )
+    if imbalance:
+        shortage = [i for i in imbalance if i.type == "shortage"]
+        surplus = [i for i in imbalance if i.type == "surplus"]
+        if shortage:
+            context += f"缺口 {len(shortage)} 项：" + "；".join(s.detail for s in shortage[:3]) + "。"
+        if surplus:
+            context += f"冗余 {len(surplus)} 项：" + "；".join(s.detail for s in surplus[:3]) + "。"
+
+    if body.focus:
+        context += f"管理者关注点：{body.focus}"
+
+    prompt = (
+        "你是一位资深 HR 顾问。请根据以下人才结构数据，给出简洁、可执行的结构优化建议。"
+        "建议按「保留激励核心」「培养转化可转型」「优化待优化」「引进缺口」四个维度组织。"
+        "用中文回答，控制在 200 字以内。\n\n"
+        f"数据摘要：{context}"
+    )
+
+    config = _tenant_config(db, user.tenant_id)
+    ai = _ai_settings(config)
+    if not ai["api_key"]:
+        return OptimizeAdviceOut(
+            advice=(
+                "基于当前数据：1）保留激励核心人才，防止流失；"
+                "2）对可转型员工制定 6 个月培养计划，重点关注能力提升；"
+                "3）待优化员工启动 PIP 或调岗评估；"
+                "4）针对缺口层级优先招聘，同时内部选拔培养。"
+            ),
+            source="rule_based",
+            generated_at=datetime.now(timezone.utc).isoformat(),
+        )
+
+    messages = [
+        {"role": "system", "content": "你是一位资深 HR 顾问，擅长人才结构分析与优化建议。"},
+        {"role": "user", "content": prompt},
+    ]
+    client = get_client(
+        base_url=ai["base_url"], api_key=ai["api_key"], model=ai["model"]
+    )
+
+    last_error = ""
+    for _ in range(max(1, settings.ai_max_attempts)):
+        try:
+            result = client.chat(messages)
+            advice = result.content.strip()
+            if advice:
+                return OptimizeAdviceOut(
+                    advice=advice,
+                    source="ai_generated",
+                    generated_at=datetime.now(timezone.utc).isoformat(),
+                )
+        except Exception as exc:
+            last_error = f"{type(exc).__name__}: {exc}"
+            continue
+
+    # 全部重试失败，回落到规则建议
+    return OptimizeAdviceOut(
+        advice=(
+            "基于当前数据：1）保留激励核心人才，防止流失；"
+            "2）对可转型员工制定 6 个月培养计划，重点关注能力提升；"
+            "3）待优化员工启动 PIP 或调岗评估；"
+            "4）针对缺口层级优先招聘，同时内部选拔培养。"
+            f"（AI 生成失败：{last_error}）"
+        ),
+        source="rule_based",
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
