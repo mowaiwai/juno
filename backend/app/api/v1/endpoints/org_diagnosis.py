@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import err, get_current_user
+from app.core.deps import Principal, err, get_current_user, get_principal
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.org_diagnosis import LiquidProject
@@ -32,6 +32,13 @@ from app.schemas.org_diagnosis import (
     TeamCandidateOut,
     ThreeChartsOut,
 )
+# S=95 为收敛统一引擎后新增档位：S 级员工新进入散点/四象限统计，
+# 属业务可见统计变化，已知会模块负责人（评审 Question-2）
+from app.services.match import GRADE_SCORES as _PERF_MAP
+from app.services.match_team import (
+    build_team_candidates,
+    willingness_by_employee as _willingness_by_employee,
+)
 
 router = APIRouter(tags=["org"])
 
@@ -46,21 +53,6 @@ _TOP_DEPTS = {
     "500": "供应链",
     "600": "营销",
 }
-
-_PERF_MAP = {"A": 90, "B": 80, "C": 70, "D": 60}
-
-# 画像七维 key → 中文标签
-_DIM_LABELS = {
-    "basic": "基本条件",
-    "biz": "业绩",
-    "contribution": "团队贡献",
-    "duty": "职责履行",
-    "knowledge": "知识技能",
-    "ability": "能力素质",
-    "perf": "绩效",
-}
-_LABEL_TO_KEY = {v: k for k, v in _DIM_LABELS.items()}
-
 
 def _top_dept_code(dept_id: str | None) -> str:
     """将任意 dept_id 归并到顶层编码（200/300/...）。"""
@@ -175,21 +167,6 @@ def _quadrants(points: list[dict]) -> dict:
     return q
 
 
-def _willingness_by_employee(db: Session, tenant_id: uuid.UUID) -> dict:
-    """取每个员工的继任意愿（任一记录 willing/unwilling 覆盖 unconfirmed）。"""
-    rows = db.execute(
-        select(SuccessionCandidate.employee_id, SuccessionCandidate.willingness)
-        .join(CorePosition, SuccessionCandidate.core_position_id == CorePosition.id)
-        .where(CorePosition.tenant_id == tenant_id)
-    ).all()
-    out: dict = {}
-    for emp_id, w in rows:
-        val = w.value if hasattr(w, "value") else str(w)
-        if emp_id not in out or out[emp_id] == "unconfirmed":
-            out[emp_id] = val
-    return out
-
-
 def _anomaly_list(employees, will: dict) -> list[str]:
     """业绩 D 或继任意愿为不愿的异常员工。"""
     out: list[str] = []
@@ -200,39 +177,6 @@ def _anomaly_list(employees, will: dict) -> list[str]:
         if will.get(emp.id) == "unwilling":
             out.append(f"{emp.name}（继任意愿：不愿）")
     return out
-
-
-def _ability_to_key(ability: str) -> str:
-    """将需求中的能力名（标签或 key）归一到 dimension_key。"""
-    if not ability:
-        return ""
-    if ability in _LABEL_TO_KEY:
-        return _LABEL_TO_KEY[ability]
-    return ability
-
-
-def _match(needs: list, dim_scores: dict) -> tuple[float, str]:
-    """计算人岗匹配分与缺口说明。"""
-    if not needs:
-        return 0.0, "项目未定义能力需求"
-    total = 0.0
-    gaps: list[str] = []
-    for need in needs:
-        ability = need.get("ability", "") if isinstance(need, dict) else ""
-        level = need.get("level", 0) if isinstance(need, dict) else 0
-        key = _ability_to_key(ability)
-        score = dim_scores.get(key)
-        if score is None:
-            score = dim_scores.get(ability)
-        if score is None or not level:
-            gaps.append(f"{ability}无数据")
-            continue
-        total += min(score / level, 1.0)
-        if score < level:
-            gaps.append(f"{ability} {score}/{level}")
-    match_score = round(total / len(needs) * 100, 1)
-    reason = "能力缺口：" + "；".join(gaps) if gaps else "能力匹配良好"
-    return match_score, reason
 
 
 # ---------------------------------------------------------------------------
@@ -514,43 +458,23 @@ def org_liquid_projects(
 def org_project_team(
     body: ProjectTeamIn,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
 ):
     project = db.get(LiquidProject, body.project_id)
-    if project is None or project.tenant_id != user.tenant_id:
+    if project is None or project.tenant_id != principal.user.tenant_id:
         raise err(404, "project_not_found", "液态项目不存在")
-    needs = project.needs or []
-    emps = db.scalars(
-        select(Employee).where(
-            Employee.tenant_id == user.tenant_id,
-            Employee.is_active.is_(True),
+    # 算分收敛到统一匹配引擎，与 /match/project-team 共用同一服务与数据范围
+    candidates = build_team_candidates(db, principal, project.needs or [])
+    return [
+        TeamCandidateOut(
+            employee_id=c.employee_id,
+            name=c.name,
+            position=c.position,
+            match_score=c.match_score,
+            willingness=c.willingness,
+            readiness=c.readiness,
+            reason=c.reason,
+            missing_dims=c.missing_dims,
         )
-    ).all()
-    latest = _latest_snapshots(db, user.tenant_id)
-    will = _willingness_by_employee(db, user.tenant_id)
-    candidates: list[TeamCandidateOut] = []
-    for emp in emps:
-        snap = latest.get(emp.id)
-        dim_scores: dict = {}
-        if snap:
-            for d in snap.dimensions:
-                if d.score is not None:
-                    dim_scores[d.dimension_key] = d.score
-        score, reason = _match(needs, dim_scores)
-        if score <= 0:
-            continue
-        readiness = (
-            "ready" if score >= 80
-            else ("developing" if score >= 50 else "gap")
-        )
-        candidates.append(TeamCandidateOut(
-            employee_id=emp.id,
-            name=emp.name,
-            position=emp.position,
-            match_score=score,
-            willingness=will.get(emp.id, "unconfirmed"),
-            readiness=readiness,
-            reason=reason,
-        ))
-    candidates.sort(key=lambda c: c.match_score, reverse=True)
-    return candidates
+        for c in candidates
+    ]

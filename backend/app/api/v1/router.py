@@ -21,6 +21,7 @@ from app.api.v1.endpoints import (
     inventory_batches,
     level_framework,
     manager,
+    match,
     me,
     notifications,
     org,
@@ -80,6 +81,7 @@ router.include_router(audit_logs.router)
 router.include_router(idp.router)
 router.include_router(recruit.router)
 router.include_router(gaps.router)
+router.include_router(match.router)
 router.include_router(org_diagnosis.router)
 router.include_router(org.router)
 router.include_router(comp.router)

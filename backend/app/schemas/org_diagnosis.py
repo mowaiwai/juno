@@ -64,3 +64,5 @@ class TeamCandidateOut(BaseModel):
     willingness: str
     readiness: str
     reason: str
+    # 缺维出参（Minor-5）：新增字段不减既有字段，兼容旧前端
+    missing_dims: list[str] = []

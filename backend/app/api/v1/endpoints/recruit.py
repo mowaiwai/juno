@@ -32,6 +32,8 @@ from app.schemas.recruit import (
     RequisitionOut,
 )
 from app.services.audit import audit_as
+from app.services.match_config import get_match_config
+from app.services.match_interview import interview_dimension_actual
 
 router = APIRouter(tags=["recruit"])
 
@@ -206,13 +208,36 @@ def compare_candidate(
         raise err(404, "candidate_not_found", "候选人不存在")
     records = db.scalars(
         select(InterviewRecord)
-        .where(InterviewRecord.candidate_id == candidate_id)
-        .order_by(InterviewRecord.created_at.desc())
+        .where(
+            InterviewRecord.tenant_id == user.tenant_id,
+            InterviewRecord.candidate_id == candidate_id,
+        )
+        # created_at 并列时按 id 降序确定性取舍（Minor-6）
+        .order_by(InterviewRecord.created_at.desc(), InterviewRecord.id.desc())
     ).all()
+    # 匹配度取「最新面试记录」评分，经统一引擎实时计算；
+    # 不读 Candidate.match_score 静态列（列保留供列表展示）
+    latest = records[0] if records else None
+    cfg = get_match_config(db, user.tenant_id)
+    result = cfg.score(
+        interview_dimension_actual(latest.dimension_scores if latest else None)
+    )
     return {
         "candidate_id": str(candidate_id),
         "name": cand.name,
-        "match_score": cand.match_score,
+        "match_score": result.score,
+        "level": result.level,
+        "missing_dims": result.missing_dims,
+        "dims": [
+            {
+                "key": d.key,
+                "actual": d.actual,
+                "required": d.required,
+                "ratio": d.ratio,
+                "is_gap": d.is_gap,
+            }
+            for d in result.dims
+        ],
         "rating": cand.rating,
         "stage": cand.stage.value,
         "records": [

@@ -28,6 +28,7 @@ import app.models.gap  # noqa: F401
 import app.models.org_diagnosis  # noqa: F401
 import app.models.perf  # noqa: F401
 import app.models.compensation  # noqa: F401
+import app.models.match  # noqa: F401
 import app.models.exam  # noqa: F401
 
 config = context.config

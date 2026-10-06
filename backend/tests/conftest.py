@@ -46,6 +46,8 @@ from app.models.compensation import (
     SalaryAdjustmentHistory,
     TenantSalaryBand,
 )
+# 匹配度引擎：显式导入确保测试库建表
+from app.models.match import MatchTenantConfig
 from app.models.user import custom_role_ref
 from app.services.level_framework import seed_v1_framework
 from app.services.llm import set_client_provider
@@ -425,6 +427,8 @@ def restore_mutable_employee_state(db_session):
     db_session.query(BonusPlan).delete(synchronize_session=False)
     db_session.query(AdjustmentPlan).delete(synchronize_session=False)
     db_session.query(TenantSalaryBand).delete(synchronize_session=False)
+    # 匹配度引擎：租户配置为纯增量表，测试期间新增行全量清理
+    db_session.query(MatchTenantConfig).delete(synchronize_session=False)
     db_session.flush()
 
     db_session.commit()

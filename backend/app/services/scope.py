@@ -30,8 +30,17 @@ def _dept_children_map(db: Session, tenant_id) -> dict[str | None, list[str]]:
     return children
 
 
+def _scope_cache(db: Session) -> dict:
+    """会话内缓存：同一请求内多次 scope 推导不重复全表加载。"""
+    return db.info.setdefault("scope_cache", {})
+
+
 def dept_subtree(db: Session, tenant_id, root_ids) -> set[str]:
     """若干部门节点及其全部下级。"""
+    cache_key = ("dept_subtree", tenant_id, tuple(sorted(root_ids)))
+    cached = _scope_cache(db).get(cache_key)
+    if cached is not None:
+        return cached
     children = _dept_children_map(db, tenant_id)
     seen: set[str] = set()
     stack = list(root_ids)
@@ -41,6 +50,7 @@ def dept_subtree(db: Session, tenant_id, root_ids) -> set[str]:
             continue
         seen.add(node)
         stack.extend(children.get(node, []))
+    _scope_cache(db)[cache_key] = seen
     return seen
 
 
@@ -55,6 +65,10 @@ def _my_employee(db: Session, principal: Principal) -> Employee | None:
 
 def _report_subtree(db: Session, tenant_id, root_emp_id) -> set[uuid.UUID]:
     """沿 manager_id 汇报链向下的全部员工 id（含根）。"""
+    cache_key = ("report_subtree", tenant_id, root_emp_id)
+    cached = _scope_cache(db).get(cache_key)
+    if cached is not None:
+        return cached
     rows = db.scalars(
         select(Employee).where(Employee.tenant_id == tenant_id)
     ).all()
@@ -69,6 +83,7 @@ def _report_subtree(db: Session, tenant_id, root_emp_id) -> set[uuid.UUID]:
             continue
         seen.add(pid)
         stack.extend(c.id for c in children.get(pid, []))
+    _scope_cache(db)[cache_key] = seen
     return seen
 
 

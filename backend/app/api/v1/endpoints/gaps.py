@@ -20,7 +20,6 @@ from app.core.deps import (
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.gap import Gap, GapAction, GapDimension, GapSeverity
-from app.models.profile import ProfileSnapshot
 from app.models.user import User
 from app.schemas.gap import (
     GapActionIn,
@@ -30,30 +29,47 @@ from app.schemas.gap import (
     TeamGapOut,
 )
 from app.services.audit import audit_as
+from app.services.match import (
+    DEFAULT_REQUIRED,
+    DIMENSION_LABELS,
+    DIM_PERF,
+    GRADE_SCORES,
+)
+from app.services.match_data import latest_match_snapshot
 from app.services.scope import apply_employee_scope, can_access_employee
 
 router = APIRouter(tags=["gap"])
 
-# 绩效等级 → 数值（A=90 / B=80 / C=70 / D=60）
-_PERF_SCORE = {"A": 90, "B": 80, "C": 70, "D": 60}
-
-# 维度阈值：dimension_key → (threshold, gap_dimension, gap_action, priority, label)
+# 维度阈值：dimension_key → (要求分, gap_dimension, gap_action, priority, label)
+# 要求分与中文标签统一引用 services.match 单一事实源
 _THRESHOLDS = {
-    "duty": (75, GapDimension.DUTY, GapAction.PROCESS_SUPERVISION, 2, "职责履行"),
-    "ability": (72, GapDimension.ABILITY, GapAction.BEHAVIOR_IMPROVE, 3, "能力素质"),
+    "duty": (
+        DEFAULT_REQUIRED["duty"],
+        GapDimension.DUTY,
+        GapAction.PROCESS_SUPERVISION,
+        2,
+        DIMENSION_LABELS["duty"],
+    ),
+    "ability": (
+        DEFAULT_REQUIRED["ability"],
+        GapDimension.ABILITY,
+        GapAction.BEHAVIOR_IMPROVE,
+        3,
+        DIMENSION_LABELS["ability"],
+    ),
     "contribution": (
-        65,
+        DEFAULT_REQUIRED["contribution"],
         GapDimension.CONTRIBUTION,
         GapAction.TEAM_CONTRIBUTION,
         2,
-        "团队贡献",
+        DIMENSION_LABELS["contribution"],
     ),
     "knowledge": (
-        70,
+        DEFAULT_REQUIRED["knowledge"],
         GapDimension.KNOWLEDGE,
         GapAction.LEARN_KNOWLEDGE,
         3,
-        "知识技能",
+        DIMENSION_LABELS["knowledge"],
     ),
 }
 
@@ -73,20 +89,6 @@ def _severity_for(score: int, threshold: int) -> GapSeverity:
     if score < threshold - 5:
         return GapSeverity.MID
     return GapSeverity.LOW
-
-
-def _latest_snapshot(
-    db: Session, employee_id: uuid.UUID, tenant_id: uuid.UUID
-) -> ProfileSnapshot | None:
-    return db.scalar(
-        select(ProfileSnapshot)
-        .where(
-            ProfileSnapshot.employee_id == employee_id,
-            ProfileSnapshot.tenant_id == tenant_id,
-        )
-        .order_by(ProfileSnapshot.version_seq.desc())
-        .limit(1)
-    )
 
 
 @router.post("/gaps/analyze", response_model=list[GapOut])
@@ -126,16 +128,16 @@ def analyze_gaps(
 
     new_gaps: list[Gap] = []
     for emp in employees:
-        snapshot = _latest_snapshot(db, emp.id, user.tenant_id)
+        snapshot = latest_match_snapshot(db, emp.id, user.tenant_id)
         dim_scores: dict[str, int | None] = {}
         if snapshot:
             for d in snapshot.dimensions:
                 dim_scores[d.dimension_key] = d.score
 
-        # 绩效差距：perf_grade < B（数值 < 80）
+        # 绩效差距：perf_grade < B（数值 < 要求分 80）
         perf_grade = (emp.perf_grade or "").upper()
-        perf_score = _PERF_SCORE.get(perf_grade)
-        if perf_score is not None and perf_score < 80:
+        perf_score = GRADE_SCORES.get(perf_grade)
+        if perf_score is not None and perf_score < DEFAULT_REQUIRED[DIM_PERF]:
             new_gaps.append(
                 Gap(
                     tenant_id=user.tenant_id,
@@ -144,7 +146,7 @@ def analyze_gaps(
                     detail="绩效等级低于 B 级",
                     standard="≥ B 级 (80 分)",
                     current=f"{perf_grade} 级 ({perf_score} 分)",
-                    severity=_severity_for(perf_score, 80),
+                    severity=_severity_for(perf_score, DEFAULT_REQUIRED[DIM_PERF]),
                     action=GapAction.PERF_IMPROVEMENT,
                     priority=1,
                     batch_id=body.batch_id,
