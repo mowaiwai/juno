@@ -41,6 +41,7 @@ import { CockpitQA } from '@/pages/CockpitQA';
 import { StructureViz } from '@/pages/StructureViz';
 import { GapWarning } from '@/pages/GapWarning';
 import { LiquidTeam } from '@/pages/LiquidTeam';
+import { GapForecast } from '@/pages/GapForecast';
 // 批次 5 · 差距 · 发展 · 绩效
 import { GapBoard } from '@/pages/GapBoard';
 import { GapAction } from '@/pages/GapAction';
@@ -173,6 +174,7 @@ export function AppRoutes() {
           <Route path="structure-viz" element={<StructureViz />} />
           <Route path="gap-warning" element={<GapWarning />} />
           <Route path="liquid-team" element={<LiquidTeam />} />
+          <Route path="gap-forecast" element={<GapForecast />} />
           {/* 批次 5 · 差距 · 发展 · 绩效 */}
           <Route path="gap-board" element={<GapBoard />} />
           <Route path="gap-action" element={<GapAction />} />
