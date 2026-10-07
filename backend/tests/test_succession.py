@@ -310,8 +310,9 @@ def test_candidate_match_info_no_fabricated_score(db_session):
 
     view = position_view(db_session, position)
     candidate = view["candidates"][0]
-    # 逐维展示：绩效等级 + duty 分；无总分
-    assert "match_score" not in candidate
+    # P3 契约：统一引擎就绪度（缺维不计入分母，不造分；无画像 → None）
+    assert candidate["match_score"] == 100.0
+    assert candidate["readiness"] == "ready_now"
     assert candidate["perf_label"] == "B"
     assert candidate["duty_score"] == 83
 

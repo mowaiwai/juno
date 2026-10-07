@@ -28,6 +28,8 @@ from app.schemas.succession import (
     CorePositionIn,
     CorePositionOut,
     CorePositionUpdate,
+    RecommendationOut,
+    SuccessionMapOut,
     TalentPoolIn,
     TalentPoolOut,
     TalentPoolUpdate,
@@ -37,6 +39,7 @@ from app.schemas.succession import (
 from app.services.scope import apply_employee_scope
 from app.services.succession import (
     auto_screen,
+    build_succession_map,
     candidate_payload,
     create_position,
     delete_position,
@@ -46,6 +49,7 @@ from app.services.succession import (
     list_pools,
     nominee,
     position_view,
+    recommend_for_position,
     remove_candidate,
     set_willingness,
     update_pool,
@@ -263,6 +267,37 @@ def willingness_endpoint(
         "employee_id": candidate.employee_id,
         "willingness": candidate.willingness.value,
     }
+
+
+# ---------------------------------------------------------------------------
+# 模块六 P3：继任推荐 / 继任地图
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/core-positions/{position_id}/recommendations",
+    response_model=list[RecommendationOut],
+)
+def recommendations_endpoint(
+    position_id: uuid.UUID,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(get_principal),
+):
+    """单岗位继任推荐：统一匹配引擎打分 + 就绪度三档，按分排序取 Top N。"""
+    _require_reader(principal)
+    position = _load(db, position_id, principal.user)
+    recs = recommend_for_position(db, position, principal, limit=limit)
+    return recs
+
+
+@router.get("/succession/map", response_model=SuccessionMapOut)
+def succession_map_endpoint(
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(get_principal),
+):
+    """继任地图：核心岗位 × 就绪度分桶（聚合计数，不含个人明细）。"""
+    _require_reader(principal)
+    return build_succession_map(db, principal.user.tenant_id)
 
 
 # ---------------------------------------------------------------------------

@@ -66,6 +66,9 @@ class CandidateOut(BaseModel):
     willingness: str
     perf_label: str | None = None
     duty_score: int | None = None
+    # 模块六 P3：统一匹配引擎就绪度（无画像数据 → None）
+    match_score: float | None = None
+    readiness: str | None = None
 
 
 class WillingnessIn(BaseModel):
@@ -133,3 +136,64 @@ class TalentPoolOut(BaseModel):
     joined_by: uuid.UUID
     joined_at: datetime
     status: str
+
+
+# ---------------------------------------------------------------------------
+# 模块六 P3：继任推荐 / 就绪度三档 / 继任地图
+# 就绪度三档口径：Ready Now（≥good）→ P-L1 核心继任、
+# 1–2 年（≥warn）→ P-L2 重点培养、3 年+（<warn）→ P-L3 潜力储备
+# ---------------------------------------------------------------------------
+
+READINESS_READY_NOW = "ready_now"
+READINESS_1_2Y = "ready_1_2y"
+READINESS_3Y = "ready_3y"
+READINESS_UNASSESSED = "unassessed"
+
+READINESS_LABELS: dict[str, str] = {
+    READINESS_READY_NOW: "Ready Now（核心继任）",
+    READINESS_1_2Y: "1–2 年可继任",
+    READINESS_3Y: "3 年+潜力储备",
+    READINESS_UNASSESSED: "暂无画像数据",
+}
+
+
+class RecommendationOut(BaseModel):
+    """单岗位继任推荐（统一匹配引擎打分，排序后 Top N）。"""
+
+    employee_id: uuid.UUID
+    name: str
+    position: str | None = None
+    grade: str | None = None
+    perf_grade: str | None = None
+    match_score: float
+    readiness: str
+    readiness_label: str
+    level: str  # 引擎原始等级 good/watch/mismatch
+    reason: str
+    missing_dims: list[str] = []
+    willingness: str = "unconfirmed"
+    in_pool: bool = False  # 是否已在任一 active 梯队池
+
+
+class MapPositionOut(BaseModel):
+    """继任地图单岗位行（就绪度分桶计数，不含个人明细）。"""
+
+    position_id: uuid.UUID
+    name: str
+    dept_name: str | None = None
+    sequence: str
+    grade: str
+    headcount: int
+    incumbent_name: str | None = None
+    ready_now: int = 0
+    ready_1_2y: int = 0
+    ready_3y: int = 0
+    unassessed: int = 0
+    candidate_count: int = 0
+    coverage: int  # 0-100，与既有 position_view 口径一致
+    risk: str  # HIGH / MID / LOW
+
+
+class SuccessionMapOut(BaseModel):
+    positions: list[MapPositionOut] = []
+    summary: dict
