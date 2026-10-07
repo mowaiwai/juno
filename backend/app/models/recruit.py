@@ -35,6 +35,24 @@ class QuestionStatus(str, enum.Enum):
     REJECTED = "rejected"
 
 
+# 题库维度 → 匹配引擎五维 key
+DIMENSION_KEY_MAP = {
+    1: "duty",          # 履职 → 职责履行
+    2: "knowledge",     # 知识 → 知识技能
+    3: "ability",       # 能力 → 能力素质
+    4: "perf",          # 业绩 → 绩效
+    5: "contribution",  # 团队贡献 → 团队贡献
+}
+
+DIMENSION_LABEL_MAP = {
+    1: "履职",
+    2: "知识",
+    3: "能力",
+    4: "业绩",
+    5: "团队贡献",
+}
+
+
 class Requisition(Base):
     """在招需求。"""
 
@@ -73,20 +91,24 @@ class Candidate(Base):
     rating: Mapped[float | None] = mapped_column(nullable=True)
     tags: Mapped[list] = mapped_column(JSON, default=list)
     applied_at: Mapped[str] = mapped_column(String(32))
+    prescreen_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class InterviewQuestion(Base):
-    """面试题。履职表即题库，四维度（1 履职 / 2 知识 / 3 能力 / 4 业绩）。"""
+    """面试题。履职表即题库，五维度（1 履职 / 2 知识 / 3 能力 / 4 业绩 / 5 团队贡献）。"""
 
     __tablename__ = "interview_questions"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid, index=True)
-    dimension: Mapped[int] = mapped_column(Integer)  # 1-4
+    dimension: Mapped[int] = mapped_column(Integer)  # 1-5
+    dimension_key: Mapped[str] = mapped_column(String(32), default="")
     position: Mapped[str] = mapped_column(String(128))
     grade: Mapped[str] = mapped_column(String(32))
+    sequence: Mapped[str] = mapped_column(String(32), default="")
     question: Mapped[str] = mapped_column(Text)
     answer_point: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rubric: Mapped[list] = mapped_column(JSON, default=list)
     source: Mapped[QuestionSource] = mapped_column(default=QuestionSource.MANUAL)
     status: Mapped[QuestionStatus] = mapped_column(default=QuestionStatus.APPROVED)
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid)

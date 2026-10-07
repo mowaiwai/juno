@@ -67,6 +67,7 @@ PERMISSION_GROUPS: list[tuple[str, str, list[tuple[str, str]]]] = [
             ("perf.plan.manage", "考核方案创建/校准/发布与结果导入"),
             ("perf.result.entry", "下属绩效初评与辅导记录写入"),
             ("perf.pip.manage", "PIP 创建与结论管理"),
+            ("perf.standard.manage", "绩效标准库维护（指标/等级/校准规则）"),
         ],
     ),
     (
@@ -75,6 +76,7 @@ PERMISSION_GROUPS: list[tuple[str, str, list[tuple[str, str]]]] = [
         [
             ("comp.rule.manage", "调薪矩阵/固浮比/停涨分位配置"),
             ("bonus.manage", "绩效奖金方案测算/提交/发放清单"),
+            ("comp.jobeval.manage", "岗位价值评估（点因素评分→职级映射）"),
         ],
     ),
     (
@@ -84,6 +86,15 @@ PERMISSION_GROUPS: list[tuple[str, str, list[tuple[str, str]]]] = [
             ("idp.coach", "他人 IDP 辅导编辑"),
             ("gap.manage", "差距分析/组织诊断运行查看"),
             ("panel.manage", "认证小组模板/安排"),
+            ("training.manage", "培训管理/经验萃取/学习地图维护"),
+        ],
+    ),
+    (
+        "SaaS 运营",
+        "saas",
+        [
+            ("saas.manage", "套餐/账单/模板市场/配置中心/AI 用量维护"),
+            ("platform.manage", "平台运营看板/租户开通封禁（仅平台管理员）"),
         ],
     ),
     (
@@ -171,6 +182,7 @@ BUILTIN_TEMPLATES: dict[str, Template] = {
             "employee.field.perf.edit",
             "perf.plan.manage",
             "perf.pip.manage",
+            "perf.standard.manage",
             "profile.view",
             "inventory.calibrate",
             "idp.coach",
@@ -187,6 +199,7 @@ BUILTIN_TEMPLATES: dict[str, Template] = {
             "employee.salary.edit",
             "comp.band.manage",
             "comp.rule.manage",
+            "comp.jobeval.manage",
             "bonus.manage",
             "profile.view",
             "audit.view",
@@ -222,6 +235,8 @@ BUILTIN_TEMPLATES: dict[str, Template] = {
             "exam.paper.manage",
             "exam.operate",
             "panel.manage",
+            "training.manage",
+            "saas.manage",
             "cockpit.ask",
         }),
         "COE·组织与人才发展",

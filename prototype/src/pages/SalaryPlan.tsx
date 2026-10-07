@@ -12,6 +12,8 @@ import {
   type AdjustmentPreviewItem,
 } from '@/api/comp';
 import { orgApi, type DepartmentItem } from '@/api/org';
+import { checkSalaryEligibility, type SalaryEligibility } from '@/api/p3Forward';
+import { RobotOutlined } from '@ant-design/icons';
 
 const fmt = (v: number) => `¥${v.toLocaleString()}`;
 
@@ -36,6 +38,11 @@ export function SalaryPlan() {
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState<AdjustmentPlanSummary[]>([]);
   const [planDetail, setPlanDetail] = useState<AdjustmentPlan | null>(null);
+  const [eligibility, setEligibility] = useState<SalaryEligibility | null>(null);
+
+  const runEligibility = (employeeId: string) => {
+    checkSalaryEligibility(employeeId).then(setEligibility).catch((e: { message: string }) => message.error(e.message));
+  };
 
   useEffect(() => {
     orgApi.departments().then(setDepts);
@@ -266,6 +273,15 @@ export function SalaryPlan() {
       render: (_: unknown, r) =>
         r.mark ? <Tag color="error">{MARK_META[r.mark]?.label ?? r.mark}</Tag> : '—',
     },
+    {
+      title: '资格',
+      width: 90,
+      render: (_: unknown, r) => (
+        <Button size="small" icon={<RobotOutlined />} onClick={() => runEligibility(r.employee_id)}>
+          初筛
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -379,6 +395,32 @@ export function SalaryPlan() {
               </div>
             )}
           </>
+        )}
+      </Modal>
+
+      <Modal
+        title={<Space><RobotOutlined />调薪资格初筛（判断辅助）</Space>}
+        open={!!eligibility}
+        onCancel={() => setEligibility(null)}
+        footer={null}
+        width={520}
+      >
+        {eligibility && (
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            <Tag color={eligibility.eligible ? 'success' : 'error'} style={{ fontSize: 14, padding: '4px 12px' }}>
+              {eligibility.eligible ? '✓ 符合调薪基本条件' : '✗ 暂不建议调薪'}
+            </Tag>
+            {eligibility.perf_grade && (
+              <div>最近绩效等级：<Tag>{eligibility.perf_grade}</Tag></div>
+            )}
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>判定依据</div>
+              {eligibility.reasons.map((r, i) => (
+                <div key={i} style={{ fontSize: 13, padding: '4px 0', color: 'var(--ink-2)' }}>· {r}</div>
+              ))}
+            </div>
+            <Tag>规则引擎初筛（{eligibility.rule_source}）· 仅供参考，人拍板</Tag>
+          </Space>
         )}
       </Modal>
     </div>

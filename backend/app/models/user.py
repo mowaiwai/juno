@@ -1,10 +1,16 @@
 import enum
 import uuid
 
-from sqlalchemy import Enum as SAEnum, JSON, ForeignKey, String, Uuid
+from sqlalchemy import Date, Enum as SAEnum, Float, Integer, JSON, ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+
+class TenantStatus(str, enum.Enum):
+    ACTIVE = "active"
+    TRIAL = "trial"
+    SUSPENDED = "suspended"
 
 # 自定义角色引用在 roles/active_role_ref 中的前缀
 CUSTOM_ROLE_PREFIX = "custom:"
@@ -61,6 +67,14 @@ class Tenant(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(128))
+    # 平台运营字段（仅 platform_admin 可见）
+    status: Mapped[str] = mapped_column(String(16), default=TenantStatus.ACTIVE.value, index=True)
+    industry: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    plan_name: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    seats: Mapped[int] = mapped_column(Integer, default=0)
+    mrr: Mapped[float] = mapped_column(Float, default=0)
+    health: Mapped[int] = mapped_column(Integer, default=100)
+    joined_at: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     users: Mapped[list["User"]] = relationship(back_populates="tenant")
 

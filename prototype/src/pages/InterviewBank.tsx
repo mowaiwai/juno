@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Col, Empty, Row, Segmented, Table, Tag, message } from 'antd';
+import { Button, Card, Col, Empty, Modal, Row, Segmented, Select, Table, Tag, Tooltip, message } from 'antd';
 import { RobotOutlined } from '@ant-design/icons';
-import { interviewApi, InterviewQuestionOut } from '@/api/recruit';
+import { interviewApi, InterviewQuestionOut, QuestionGenerateIn } from '@/api/recruit';
 
-const DIM_LABEL: Record<number, string> = { 1: '履职', 2: '知识', 3: '能力', 4: '业绩' };
+const DIM_LABEL: Record<number, string> = { 1: '履职', 2: '知识', 3: '能力', 4: '业绩', 5: '团队贡献' };
+const DIM_KEY_LABEL: Record<string, string> = {
+  duty: '职责履行', knowledge: '知识技能', ability: '能力素质',
+  perf: '绩效', contribution: '团队贡献',
+};
 const SOURCE_META = {
   standard: { label: '履职表转制', bg: 'var(--teal-soft)', color: 'var(--teal)' },
   ai: { label: 'AI 出题', bg: 'var(--clay-soft)', color: 'var(--clay)' },
@@ -14,29 +18,45 @@ const STATUS_META = {
   pending_review: { label: '待审核', bg: 'var(--ochre-soft)', color: 'var(--ochre)' },
   rejected: { label: '已驳回', bg: 'var(--danger-soft)', color: 'var(--danger)' },
 } as const;
+const SEQ_OPTIONS = [
+  { value: '', label: '全部序列' },
+  { value: 'SW', label: '软件 SW' },
+  { value: 'ENG', label: '机械 ENG' },
+  { value: 'SAL', label: '销售 SAL' },
+  { value: 'MGT', label: '管理 MGT' },
+];
 
 export function InterviewBank() {
   const [rows, setRows] = useState<InterviewQuestionOut[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dim, setDim] = useState<'all' | '1' | '2' | '3' | '4'>('all');
+  const [dim, setDim] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all');
+  const [seq, setSeq] = useState<string>('');
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
+  const [genOpen, setGenOpen] = useState(false);
+  const [genForm, setGenForm] = useState<QuestionGenerateIn>({
+    position: '高级软件工程师', grade: 'P4', sequence: '',
+  });
 
-  useEffect(() => {
-    interviewApi.list().then((data) => {
+  const load = () => {
+    interviewApi.list(undefined, undefined, seq || undefined).then((data) => {
       setRows(data);
       setLoading(false);
     }).catch(() => {
       message.error('面试题库加载失败');
       setLoading(false);
     });
-  }, []);
+  };
+
+  useEffect(() => { load(); }, [seq]);
 
   const list = useMemo(() => rows.filter((r) => dim === 'all' || r.dimension === Number(dim)), [rows, dim]);
 
   const handleGenerate = () => {
     message.loading({ content: 'AI 生成中...', key: 'gen', duration: 2 });
-    interviewApi.generate({ position: '高级软件工程师', grade: 'P4' }).then((newQs) => {
+    interviewApi.generate(genForm).then((newQs) => {
       setRows((prev) => [...newQs, ...prev]);
-      message.success({ content: `AI 生成 ${newQs.length} 道题，已进入待审核`, key: 'gen' });
+      message.success({ content: `AI 生成 ${newQs.length} 道题（五维），已进入待审核`, key: 'gen' });
+      setGenOpen(false);
     }).catch(() => {
       message.error({ content: 'AI 生成失败', key: 'gen' });
     });
@@ -55,7 +75,7 @@ export function InterviewBank() {
     total: rows.length,
     pending: rows.filter((r) => r.status === 'pending_review').length,
     approved: rows.filter((r) => r.status === 'approved').length,
-    dims: [1, 2, 3, 4].map((d) => rows.filter((r) => r.dimension === d).length),
+    dims: [1, 2, 3, 4, 5].map((d) => rows.filter((r) => r.dimension === d).length),
   };
 
   return (
@@ -63,9 +83,9 @@ export function InterviewBank() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-serif">面试题库</h1>
-          <div className="page-subtitle">履职表即题库 · 任职资格四部分均可转题 · AI 按职级出题需人工审核</div>
+          <div className="page-subtitle">履职表即题库 · 五维度出题 · L1–L5 行为锚点 · AI 出题需人工审核</div>
         </div>
-        <Button type="primary" icon={<RobotOutlined />} style={{ background: 'var(--charcoal)' }} onClick={handleGenerate}>
+        <Button type="primary" icon={<RobotOutlined />} style={{ background: 'var(--charcoal)' }} onClick={() => setGenOpen(true)}>
           AI 按职级出题
         </Button>
       </div>
@@ -91,8 +111,8 @@ export function InterviewBank() {
         </Col>
         <Col span={9}>
           <Card variant="borderless" style={{ background: 'var(--surface)' }} size="small">
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }}>四维覆盖（履职 / 知识 / 能力 / 业绩）</div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }}>五维覆盖</div>
+            <div style={{ display: 'flex', gap: 6 }}>
               {counts.dims.map((v, i) => (
                 <div key={i} style={{ flex: 1, textAlign: 'center', background: 'var(--surface-sunken)', borderRadius: 6, padding: '6px 0' }}>
                   <div className="num" style={{ fontWeight: 700 }}>{v}</div>
@@ -105,17 +125,24 @@ export function InterviewBank() {
       </Row>
 
       <Card variant="borderless" style={{ background: 'var(--surface)' }} size="small">
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Segmented
             value={dim}
-            onChange={(v) => setDim(v as 'all' | '1' | '2' | '3' | '4')}
+            onChange={(v) => setDim(v as 'all' | '1' | '2' | '3' | '4' | '5')}
             options={[
               { label: '全部维度', value: 'all' },
               { label: '履职', value: '1' },
               { label: '知识', value: '2' },
               { label: '能力', value: '3' },
               { label: '业绩', value: '4' },
+              { label: '团队贡献', value: '5' },
             ]}
+          />
+          <Select
+            value={seq}
+            onChange={setSeq}
+            options={SEQ_OPTIONS}
+            style={{ width: 140 }}
           />
         </div>
         {list.length === 0 && !loading ? (
@@ -127,10 +154,27 @@ export function InterviewBank() {
             pagination={false}
             size="middle"
             loading={loading}
+            expandedRowKeys={expandedRowKeys}
+            onExpand={(expanded, record) => {
+              setExpandedRowKeys(expanded ? [...expandedRowKeys, record.id] : expandedRowKeys.filter((k) => k !== record.id));
+            }}
+            expandable={{
+              expandedRowRender: (r) => r.rubric?.length ? (
+                <div style={{ padding: '0 8px 8px' }}>
+                  <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }}>评分锚点（L1–L5 行为等级）</div>
+                  {r.rubric.sort((a, b) => a.level - b.level).map((rb) => (
+                    <div key={rb.level} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                      <Tag style={{ borderRadius: 4, margin: 0, background: 'var(--charcoal)', color: '#fff', borderColor: 'transparent' }}>L{rb.level}</Tag>
+                      <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{rb.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <div style={{ padding: '0 8px 8px', fontSize: 12, color: 'var(--ink-4)' }}>暂无评分锚点</div>,
+            }}
             columns={[
               {
                 title: '维度',
-                width: 70,
+                width: 90,
                 render: (_: unknown, r: InterviewQuestionOut) => (
                   <Tag style={{ borderRadius: 6, background: 'var(--charcoal)', color: '#fff', borderColor: 'transparent', fontWeight: 600 }}>
                     {DIM_LABEL[r.dimension]}
@@ -150,9 +194,9 @@ export function InterviewBank() {
               },
               {
                 title: '适用',
-                width: 150,
+                width: 160,
                 render: (_: unknown, r: InterviewQuestionOut) => (
-                  <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{r.position} · {r.grade}</span>
+                  <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{r.position} · {r.grade}{r.sequence ? ` · ${r.sequence}` : ''}</span>
                 ),
               },
               {
@@ -185,7 +229,9 @@ export function InterviewBank() {
                       <Button type="link" size="small" danger style={{ padding: '0 4px' }} onClick={() => review(r.id, false)}>驳回</Button>
                     </div>
                   ) : (
-                    <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>已归档</span>
+                    <Tooltip title={DIM_KEY_LABEL[r.dimension_key] ?? '—'}>
+                      <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>已归档</span>
+                    </Tooltip>
                   ),
               },
             ]}
@@ -195,10 +241,48 @@ export function InterviewBank() {
 
       <Card variant="borderless" style={{ background: 'var(--surface-sunken)', marginTop: 16 }} size="small">
         <div style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 2 }}>
-          <b>追问话术约定</b>：业绩类问题统一追问「最近 6–12 个月优化了哪个点、产出什么效果」，要求数据说明并厘清个人贡献边界；
-          AI 生成题一律走「待审核 → 生效/驳回」，审核记录留痕。
+          <b>五维对应匹配引擎</b>：履职→职责履行、知识→知识技能、能力→能力素质、业绩→绩效、团队贡献→团队贡献；
+          业绩类统一追问「最近 6–12 个月优化了哪个点、产出什么效果」；AI 生成题一律走「待审核 → 生效/驳回」。
         </div>
       </Card>
+
+      <Modal title="AI 按职级生成五维面试题" open={genOpen} onOk={handleGenerate} onCancel={() => setGenOpen(false)} okText="生成" destroyOnClose>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 4 }}>岗位</div>
+            <input
+              className="juno-input"
+              value={genForm.position}
+              onChange={(e) => setGenForm({ ...genForm, position: e.target.value })}
+              style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--surface)' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 4 }}>职级</div>
+              <input
+                className="juno-input"
+                value={genForm.grade}
+                onChange={(e) => setGenForm({ ...genForm, grade: e.target.value })}
+                style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--surface)' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 4 }}>岗位序列</div>
+              <Select
+                value={genForm.sequence}
+                onChange={(v) => setGenForm({ ...genForm, sequence: v })}
+                options={SEQ_OPTIONS.filter((o) => o.value)}
+                style={{ width: '100%' }}
+                placeholder="可选"
+              />
+            </div>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>
+            将按五维度（履职/知识/能力/业绩/团队贡献）各生成 1 题，含 L1–L5 行为锚点，进入待审核状态。
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

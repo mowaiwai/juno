@@ -15,6 +15,7 @@ from sqlalchemy import (
     Date,
     Float,
     ForeignKey,
+    Integer,
     JSON,
     String,
     Text,
@@ -161,3 +162,32 @@ class CoachingRecord(Base):
     content: Mapped[str] = mapped_column(Text)
     happened_at: Mapped[date] = mapped_column(Date)
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid)
+
+
+class PerfIndicatorType(str, enum.Enum):
+    KPI = "kpi"
+    OKR = "okr"
+    VALUE = "value"  # 价值观
+
+
+class PerfIndicator(Base):
+    """绩效考核指标库（KPI / OKR / 价值观）。
+
+    与任职资格标准解耦维护，供考核方案按序列选用。
+    """
+
+    __tablename__ = "perf_indicators"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4
+    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid, index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    type: Mapped[str] = mapped_column(String(16), index=True)
+    # 适用序列码列表（空表示全序列）
+    sequence_codes: Mapped[list] = mapped_column(JSON, default=list)
+    weight_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    weight_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    data_source: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)

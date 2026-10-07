@@ -25,6 +25,70 @@ class ConstantsUpdate(BaseModel):
         return {k: v for k, v in self.model_dump().items() if v is not None}
 
 
+# ---------- 绩效标准库（指标 / 等级 / 校准规则） ----------
+
+IndicatorType = Literal["kpi", "okr", "value"]
+
+
+class IndicatorCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    type: IndicatorType
+    sequence_codes: list[str] = Field(default_factory=list)
+    weight_min: float | None = Field(default=None, ge=0, le=100)
+    weight_max: float | None = Field(default=None, ge=0, le=100)
+    data_source: str | None = Field(default=None, max_length=128)
+    sort_order: int = 0
+
+
+class IndicatorUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    type: IndicatorType | None = None
+    sequence_codes: list[str] | None = None
+    weight_min: float | None = Field(default=None, ge=0, le=100)
+    weight_max: float | None = Field(default=None, ge=0, le=100)
+    data_source: str | None = Field(default=None, max_length=128)
+    sort_order: int | None = None
+
+
+class IndicatorOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    name: str
+    type: IndicatorType
+    sequence_codes: list[str]
+    weight_min: float | None
+    weight_max: float | None
+    data_source: str | None
+    sort_order: int
+    created_at: datetime
+
+
+class CalibrationRuleItem(BaseModel):
+    title: str = Field(min_length=1, max_length=64)
+    desc: str = Field(min_length=1)
+
+
+class CalibrationRulesUpdate(BaseModel):
+    rules: list[CalibrationRuleItem]
+
+
+class PerfGradeMeta(BaseModel):
+    grade: str
+    label: str
+    definition: str
+    grid: str
+    cutoff: float | None = None
+    coefficient: float | None = None
+    distribution_range: list[float] | None = None
+
+
+class PerfStandardsOut(BaseModel):
+    indicators: list[IndicatorOut]
+    grades: list[PerfGradeMeta]
+    calibration_rules: list[CalibrationRuleItem]
+
+
 # ---------- 考核方案 ----------
 
 class PlanCreate(BaseModel):

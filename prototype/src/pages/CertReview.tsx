@@ -18,7 +18,7 @@ import {
   Tag,
   message,
 } from 'antd';
-import { AuditOutlined, SendOutlined } from '@ant-design/icons';
+import { AuditOutlined, SendOutlined, RobotOutlined } from '@ant-design/icons';
 import { useAuth, useDataScope } from '@/store/auth';
 import { certifications, CERT_ROUTER_LABEL, CERT_STAGE_LABEL, type CertRecord } from '@/mock/certifications';
 import { employees as allEmployees } from '@/mock/people';
@@ -34,6 +34,7 @@ import {
   type ApplicationListItemDTO,
 } from '@/api/applications';
 import { ApplicationMaterial } from '@/components/ApplicationMaterial';
+import { prescreenPromotion, type PromotionPrescreen } from '@/api/p3Forward';
 
 // ============ Mock 原型页 ============
 
@@ -214,6 +215,23 @@ function ManagerReviewPage() {
   const [rejectCategory, setRejectCategory] =
     useState<RejectCategoryValue>('evidence_insufficient');
   const [rejectComment, setRejectComment] = useState('');
+  const [prescreen, setPrescreen] = useState<PromotionPrescreen | null>(null);
+  const [prescreenOpen, setPrescreenOpen] = useState(false);
+  const [prescreenLoading, setPrescreenLoading] = useState(false);
+
+  const runPrescreen = async () => {
+    if (!selectedId) return;
+    setPrescreenLoading(true);
+    try {
+      const result = await prescreenPromotion(selectedId);
+      setPrescreen(result);
+      setPrescreenOpen(true);
+    } catch (e) {
+      message.error(e instanceof ApiError ? e.message : 'AI 预审失败');
+    } finally {
+      setPrescreenLoading(false);
+    }
+  };
 
   const loadQueue = useCallback(async () => {
     setQueue(null);
@@ -369,6 +387,9 @@ function ManagerReviewPage() {
                     </span>
                   </Space>
                   <Space>
+                    <Button icon={<RobotOutlined />} loading={prescreenLoading} onClick={() => void runPrescreen()}>
+                      AI 预审
+                    </Button>
                     <Button type="primary" loading={working} onClick={() => void approve()}>
                       初审通过
                     </Button>
@@ -410,15 +431,51 @@ function ManagerReviewPage() {
             showCount
             value={rejectComment}
             onChange={(e) => setRejectComment(e.target.value)}
-            placeholder="驳回说明必填：具体指出材料/自评的问题，便于员工补充改进（留痕可审计）"
+            placeholder="驳回说明必填：具体指出材料/标准条目的问题，便于员工补充改进（留痕可审计）"
           />
         </Space>
+      </Modal>
+
+      <Modal
+        title={<Space><RobotOutlined />AI 材料预审（判断辅助）</Space>}
+        open={prescreenOpen}
+        onCancel={() => setPrescreenOpen(false)}
+        footer={null}
+        width={600}
+      >
+        {prescreen && (
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            <Alert
+              type={prescreen.complete ? 'success' : 'warning'}
+              showIcon
+              message={prescreen.complete ? '材料完整' : `存在 ${prescreen.missing_fields.length} 项待补充`}
+              description={
+                prescreen.complete
+                  ? '未检测到必备材料缺失。'
+                  : `缺失：${prescreen.missing_fields.join('、')}`
+              }
+            />
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>预审意见</div>
+              <div style={{ background: 'var(--surface-sunken)', padding: 12, borderRadius: 8, fontSize: 13 }}>
+                {prescreen.ai_review}
+              </div>
+            </div>
+            {prescreen.suggested_questions.length > 0 && (
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>建议答辩问题</div>
+                {prescreen.suggested_questions.map((q, i) => (
+                  <div key={i} style={{ fontSize: 13, padding: '4px 0' }}>{i + 1}. {q}</div>
+                ))}
+              </div>
+            )}
+            <Tag>{prescreen.source === 'ai' ? 'AI 生成（仅供参考，人拍板）' : '规则判定（未配置 AI）'}</Tag>
+          </Space>
+        )}
       </Modal>
     </div>
   );
 }
-
-// ============ 真实 API：HR 认证管理与发布 ============
 
 const HR_FILTERS = [
   { label: '全部', value: 'all' },

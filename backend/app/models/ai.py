@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import ForeignKey, Integer, JSON, String, Text, Uuid
+from sqlalchemy import Float, ForeignKey, Integer, JSON, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -35,8 +35,10 @@ class AIUsage(Base):
     application_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("applications.id"), nullable=True, index=True
     )
-    feature: Mapped[str] = mapped_column(String(64))
+    feature: Mapped[str] = mapped_column(String(64))  # 场景：出题/归因/问答/预审/画像/IDP
     model: Mapped[str] = mapped_column(String(64))
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
     total_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost: Mapped[float] = mapped_column(Float, default=0)
+    operator: Mapped[str | None] = mapped_column(String(128), nullable=True)

@@ -87,6 +87,12 @@ import { AiUsage } from '@/pages/AiUsage';
 import { Billing } from '@/pages/Billing';
 import { PlatformTenants } from '@/pages/PlatformTenants';
 import { PlatformBoard } from '@/pages/PlatformBoard';
+// P3 远期能力
+import JobEvaluationPage from '@/pages/JobEvaluation';
+import IncentiveManagement from '@/pages/IncentiveManagement';
+import QuestionnairePage from '@/pages/QuestionnairePage';
+import Panorama from '@/pages/Panorama';
+import TurnoverRisk from '@/pages/TurnoverRisk';
 import { WsTenant } from '@/pages/WsTenant';
 import { WsPlatform } from '@/pages/WsPlatform';
 import { PerfStandards } from '@/pages/PerfStandards';
@@ -223,6 +229,11 @@ export function AppRoutes() {
           <Route path="billing" element={<Billing />} />
           <Route path="platform-tenants" element={<PlatformTenants />} />
           <Route path="platform-board" element={<PlatformBoard />} />
+          <Route path="job-evaluation" element={<JobEvaluationPage />} />
+          <Route path="incentive-management" element={<IncentiveManagement />} />
+          <Route path="questionnaire" element={<QuestionnairePage />} />
+          <Route path="panorama" element={<Panorama />} />
+          <Route path="turnover-risk" element={<TurnoverRisk />} />
           <Route path="ws-tenant" element={<WsTenant />} />
           <Route path="ws-platform" element={<WsPlatform />} />
           <Route path="perf-standards" element={<PerfStandards />} />

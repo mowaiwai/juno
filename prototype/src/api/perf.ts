@@ -199,6 +199,76 @@ export interface MyPerfOut {
   pips: PipOut[];
 }
 
+// ============ 绩效标准库 ============
+
+export type IndicatorType = 'kpi' | 'okr' | 'value';
+
+export interface IndicatorOut {
+  id: string;
+  name: string;
+  type: IndicatorType;
+  sequence_codes: string[];
+  weight_min: number | null;
+  weight_max: number | null;
+  data_source: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface IndicatorIn {
+  name: string;
+  type: IndicatorType;
+  sequence_codes?: string[];
+  weight_min?: number | null;
+  weight_max?: number | null;
+  data_source?: string | null;
+  sort_order?: number;
+}
+
+export type IndicatorUpdate = Partial<IndicatorIn>;
+
+export interface CalibrationRule {
+  title: string;
+  desc: string;
+}
+
+export interface PerfGradeMeta {
+  grade: Grade;
+  label: string;
+  definition: string;
+  grid: string;
+  cutoff: number | null;
+  coefficient: number | null;
+  distribution_range: [number, number] | null;
+}
+
+export interface PerfStandardsOut {
+  indicators: IndicatorOut[];
+  grades: PerfGradeMeta[];
+  calibration_rules: CalibrationRule[];
+}
+
+const MOCK_GRADES: PerfGradeMeta[] = [
+  { grade: 'S', label: '卓越', definition: '显著超越目标，产出行业级标杆成果', grid: '九宫格 1 格（明星）核心候选', cutoff: 95, coefficient: 1.5, distribution_range: [0, 0.05] },
+  { grade: 'A', label: '优秀', definition: '全面达成并部分超越目标', grid: '九宫格 1-2 格候选', cutoff: 90, coefficient: 1.2, distribution_range: [0, 0.15] },
+  { grade: 'B', label: '称职', definition: '达成岗位要求的全部关键目标', grid: '九宫格中位区间', cutoff: 80, coefficient: 1.0, distribution_range: [0.15, 0.80] },
+  { grade: 'C', label: '待改进', definition: '部分目标未达成，需辅导与改进计划', grid: '进入绩效改进流程', cutoff: 65, coefficient: null, distribution_range: null },
+  { grade: 'D', label: '不合格', definition: '关键目标严重偏离，连续两期触发调整', grid: '九宫格 9 格 · 调岗或退出', cutoff: 0, coefficient: 0.5, distribution_range: null },
+];
+
+const MOCK_RULES: CalibrationRule[] = [
+  { title: '建议分布', desc: 'S+A 建议不超过 20%，C+D 建议不少于 10%；人数不足 10 人的团队合并校准。' },
+  { title: '跨部门校准会', desc: '同级拉通评议，HR 主持；校准结论需 2/3 以上评委同意方可调整等级。' },
+  { title: '绩效-潜力双维校验', desc: '绩效等级须与潜力评估交叉校验，结果直接映射九宫格位置，禁止单维定档。' },
+  { title: '申诉窗口', desc: '结果公示后 5 个工作日内可申诉，由 HRBP 复核并在 10 个工作日内给出结论。' },
+];
+
+const MOCK_INDICATORS: IndicatorOut[] = [
+  { id: 'i1', name: '营收 / 利润目标达成率', type: 'kpi', sequence_codes: ['SW', 'SAL'], weight_min: 40, weight_max: 60, data_source: '经营系统', sort_order: 0, created_at: '2026-01-01' },
+  { id: 'i2', name: '关键项目里程碑交付', type: 'okr', sequence_codes: ['SW', 'ENG'], weight_min: 50, weight_max: 70, data_source: '项目系统', sort_order: 1, created_at: '2026-01-01' },
+  { id: 'i3', name: '人才培养与团队贡献', type: 'value', sequence_codes: ['MGT'], weight_min: 10, weight_max: 20, data_source: '上级评估', sort_order: 2, created_at: '2026-01-01' },
+];
+
 // ============ 常量 ============
 
 export const DEFAULT_CONSTANTS = mockConstants;
@@ -211,6 +281,36 @@ export const perfApi = {
   updateConstants(patch: ConstantsUpdate): Promise<PerfConstants> {
     if (USE_MOCK) return mockPerfApi.updateConstants(patch);
     return api.put<PerfConstants>('/perf/constants', patch);
+  },
+
+  // ---- 绩效标准库 ----
+  getStandards(): Promise<PerfStandardsOut> {
+    if (USE_MOCK) return Promise.resolve({ indicators: MOCK_INDICATORS, grades: MOCK_GRADES, calibration_rules: MOCK_RULES });
+    return api.get<PerfStandardsOut>('/perf/standards');
+  },
+  listIndicators(type?: IndicatorType): Promise<IndicatorOut[]> {
+    if (USE_MOCK) return Promise.resolve(MOCK_INDICATORS.filter((i) => !type || i.type === type));
+    return api.get<IndicatorOut[]>('/perf/standards/indicators', type ? { type } : undefined);
+  },
+  createIndicator(body: IndicatorIn): Promise<IndicatorOut> {
+    if (USE_MOCK) return Promise.resolve({ ...MOCK_INDICATORS[0], id: `i_${Date.now()}`, ...body, sequence_codes: body.sequence_codes ?? [] });
+    return api.post<IndicatorOut>('/perf/standards/indicators', body);
+  },
+  updateIndicator(id: string, body: IndicatorUpdate): Promise<IndicatorOut> {
+    if (USE_MOCK) return Promise.resolve({ ...MOCK_INDICATORS[0], id, ...body } as IndicatorOut);
+    return api.put<IndicatorOut>(`/perf/standards/indicators/${id}`, body);
+  },
+  deleteIndicator(id: string): Promise<void> {
+    if (USE_MOCK) return Promise.resolve();
+    return api.delete(`/perf/standards/indicators/${id}`);
+  },
+  getCalibrationRules(): Promise<CalibrationRule[]> {
+    if (USE_MOCK) return Promise.resolve(MOCK_RULES);
+    return api.get<CalibrationRule[]>('/perf/standards/calibration-rules');
+  },
+  updateCalibrationRules(rules: CalibrationRule[]): Promise<CalibrationRule[]> {
+    if (USE_MOCK) return Promise.resolve(rules);
+    return api.put<CalibrationRule[]>('/perf/standards/calibration-rules', { rules });
   },
 
   // ---- 方案 ----

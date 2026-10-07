@@ -26,6 +26,7 @@ from app.api.v1.endpoints import (
     notifications,
     org,
     org_diagnosis,
+    p3_forward,
     panel_templates,
     perf,
     perf_dev,
@@ -35,9 +36,11 @@ from app.api.v1.endpoints import (
     profiles,
     recruit,
     review,
+    saas,
     roles,
     standard_sets,
     structure_gap,
+    training,
     talent_pipeline,
     tenant_level_mapping,
     users,
@@ -94,3 +97,7 @@ router.include_router(perf_plans.router)
 router.include_router(perf_results.router)
 router.include_router(perf_publish.router)
 router.include_router(perf_dev.router)
+router.include_router(training.router)
+router.include_router(saas.router)
+router.include_router(saas.platform_router)
+router.include_router(p3_forward.router)
