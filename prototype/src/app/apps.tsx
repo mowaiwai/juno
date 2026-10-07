@@ -62,6 +62,7 @@ import { SalaryTable } from '@/pages/SalaryTable';
 import { MarketData } from '@/pages/MarketData';
 import { SalaryPlan } from '@/pages/SalaryPlan';
 import { SalaryApprove } from '@/pages/SalaryApprove';
+import { BonusPlan } from '@/pages/BonusPlan';
 import { SalaryReport } from '@/pages/SalaryReport';
 import { InvBatches } from '@/pages/InvBatches';
 import { InvCreate } from '@/pages/InvCreate';
@@ -265,7 +266,8 @@ export const APP_SALARY: AppDef = {
     { key: 'market', label: '市场分位', pageKey: 'market-data', component: MarketData },
     { key: 'plan', label: '调薪方案', pageKey: 'salary-plan', component: SalaryPlan },
     { key: 'approve', label: '调薪审批', pageKey: 'salary-approve', component: SalaryApprove },
-    { key: 'report', label: '套改汇报', pageKey: 'salary-report', component: SalaryReport },
+    { key: 'bonus', label: '绩效奖金', pageKey: 'bonus-plan', component: BonusPlan },
+    { key: 'report', label: '薪酬汇报', pageKey: 'salary-report', component: SalaryReport },
   ],
 };
 

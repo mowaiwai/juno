@@ -1,20 +1,34 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Col, Row, Table, Tabs, Tag, Spin } from 'antd';
-import { orgApi, type ChannelFamily, type GradeBand } from '@/api/org';
+import { Button, Card, Col, InputNumber, Modal, Row, Table, Tabs, Tag, Spin, Form, message } from 'antd';
+import { orgApi, type ChannelFamily, type GradeBand, type SalaryBandIn } from '@/api/org';
+import { useAuth } from '@/store/auth';
 
 const fmt = (v: number) => `¥${v.toLocaleString()}`;
 
+/** 持 comp.band.manage 的内置角色（服务端为最终裁决，403 由弹窗兜底） */
+const BAND_MANAGE_ROLES = ['tenant_admin', 'hr_coe_comp'];
+
 export function SalaryTable() {
+  const activeRole = useAuth((s) => s.activeRole);
+  const canManage =
+    !!activeRole && (BAND_MANAGE_ROLES.includes(activeRole) || activeRole.startsWith('custom:'));
+
   const [channels, setChannels] = useState<ChannelFamily[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [seq, setSeq] = useState<string>('');
+  const [editing, setEditing] = useState<GradeBand | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [form] = Form.useForm<SalaryBandIn>();
 
-  useEffect(() => {
+  const load = () =>
     orgApi.channels().then((chs) => {
       setChannels(chs);
-      if (chs.length) setSeq(chs[0].sequences[0] ?? chs[0].family);
+      setSeq((cur) => cur || chs[0]?.sequences[0] || chs[0]?.family || '');
       setLoading(false);
     });
+
+  useEffect(() => {
+    load();
   }, []);
 
   const rows = useMemo<GradeBand[]>(() => {
@@ -22,6 +36,35 @@ export function SalaryTable() {
     const ch = channels.find((c) => c.sequences.includes(seq)) ?? channels[0];
     return ch ? ch.grades : [];
   }, [channels, seq]);
+
+  const openEdit = (r: GradeBand) => {
+    setEditing(r);
+    form.setFieldsValue({
+      grade: r.grade,
+      min_value: r.salary_band[0],
+      max_value: r.salary_band[1],
+      p25: r.p25 ?? undefined,
+      p50: r.p50 ?? undefined,
+      p75: r.p75 ?? undefined,
+      p90: r.p90 ?? undefined,
+      market_source_year: r.market_source_year ?? undefined,
+    });
+  };
+
+  const save = async () => {
+    const values = await form.validateFields();
+    setSaving(true);
+    try {
+      await orgApi.upsertSalaryBand({ ...values, grade: editing!.grade });
+      message.success(`${editing!.grade} 带宽已更新`);
+      setEditing(null);
+      await load();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading || !channels) {
     return (
@@ -117,6 +160,19 @@ export function SalaryTable() {
               width: 90,
               render: (_, r) => r.market_source_year ?? '—',
             },
+            ...(canManage
+              ? [
+                  {
+                    title: '操作',
+                    width: 90,
+                    render: (_: unknown, r: GradeBand) => (
+                      <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openEdit(r)}>
+                        维护
+                      </Button>
+                    ),
+                  },
+                ]
+              : []),
           ]}
         />
       </Card>
@@ -126,6 +182,72 @@ export function SalaryTable() {
           <b>规则说明</b>：带宽以市场 P50 锚定；渗透率 ≥ P75 触发停涨；D 等 + PIP 不通过自动降薪。
         </div>
       </Card>
+
+      <Modal
+        title={`维护带宽 · ${editing?.grade ?? ''}`}
+        open={!!editing}
+        onOk={save}
+        confirmLoading={saving}
+        onCancel={() => setEditing(null)}
+        destroyOnHidden
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label="带宽下限（月）" name="min_value" rules={[{ required: true, message: '必填' }]}>
+                <InputNumber style={{ width: '100%' }} min={0} step={100} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="带宽上限（月）"
+                name="max_value"
+                rules={[
+                  { required: true, message: '必填' },
+                  ({ getFieldValue }) => ({
+                    validator: (_, v) =>
+                      v == null || v > getFieldValue('min_value')
+                        ? Promise.resolve()
+                        : Promise.reject(new Error('上限必须大于下限')),
+                  }),
+                ]}
+              >
+                <InputNumber style={{ width: '100%' }} min={0} step={100} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={6}>
+              <Form.Item label="P25" name="p25">
+                <InputNumber style={{ width: '100%' }} min={0} step={100} />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item label="P50" name="p50">
+                <InputNumber style={{ width: '100%' }} min={0} step={100} />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item label="P75" name="p75">
+                <InputNumber style={{ width: '100%' }} min={0} step={100} />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item label="P90" name="p90">
+                <InputNumber style={{ width: '100%' }} min={0} step={100} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="市场数据年份" name="market_source_year">
+            <InputNumber style={{ width: 160 }} min={2000} max={2100} precision={0} placeholder="如 2026" />
+          </Form.Item>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+            保存即覆盖该职级带宽与市场分位（租户级覆盖，写审计）；分位留空表示暂无市场数据。
+          </div>
+        </Form>
+      </Modal>
     </div>
   );
 }

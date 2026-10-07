@@ -51,6 +51,18 @@ export interface PositionItem {
 
 export type FamilyLabelMap = Record<string, string>;
 
+/** 薪级带宽维护入参（PUT /org/salary-bands，权限 comp.band.manage） */
+export interface SalaryBandIn {
+  grade: string;
+  min_value: number;
+  max_value: number;
+  p25?: number | null;
+  p50?: number | null;
+  p75?: number | null;
+  p90?: number | null;
+  market_source_year?: number | null;
+}
+
 // 模块级缓存
 let _depts: Promise<DepartmentItem[]> | null = null;
 let _positions: Promise<PositionItem[]> | null = null;
@@ -130,6 +142,13 @@ export const orgApi = {
     _channels = null;
     _familyLabel = null;
   },
+
+  /** 维护薪级带宽 + 市场分位（覆盖式 upsert，写审计） */
+  upsertSalaryBand: (body: SalaryBandIn) =>
+    api.put<GradeBand>('/org/salary-bands', body).then((r) => {
+      _channels = null;
+      return r;
+    }),
 };
 
 /** 部门名查找（兼容 mock 与真实模式） */

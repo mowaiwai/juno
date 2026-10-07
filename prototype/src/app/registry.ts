@@ -119,13 +119,13 @@ export const pageRegistry: PageMeta[] = [
   { key: 'pool-training', title: '培养跟踪', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre'], depth: '○', done: true, hideInNav: true },
 
   // ============ 批次 7 · 工资与调薪（仅薪酬激励 COE；审批加 exec，金额对 exec 掩码） ============
-  { key: 'salary-table', title: '等级工资表', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp'], depth: '●', done: true, hideInNav: true },
-  { key: 'market-data', title: '市场分位数据', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp'], depth: '◐', done: true, hideInNav: true },
-  { key: 'salary-plan', title: '调薪方案建议', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp'], depth: '●', done: true, hideInNav: true },
-  { key: 'salary-approve', title: '调薪审批', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp', 'exec'], depth: '●', done: true, hideInNav: true, note: 'exec 参与审批，页面内薪资金额对 exec 掩码' },
-  { key: 'salary-report', title: '套改汇报材料', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp'], depth: '◐', done: true, hideInNav: true },
-  { key: 'bonus-plan', title: '绩效奖金方案', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp', 'exec'], depth: '●', done: true, hideInNav: true },
-  { key: 'my-salary', title: '我的薪酬', group: '薪酬管理', batch: 7, roles: ['employee', 'manager', 'hr_coe_comp', 'exec'], depth: '●', done: true, hideInNav: true },
+  { key: 'salary-table', title: '等级工资表', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp'], depth: '●', done: true, hideInNav: true, note: '已对接 /org/channels；带宽/分位维护对接 PUT /org/salary-bands' },
+  { key: 'market-data', title: '市场分位数据', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp'], depth: '●', done: true, hideInNav: true, note: '已对接 /org/channels 分位 + 在职分布' },
+  { key: 'salary-plan', title: '调薪方案建议', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp'], depth: '●', done: true, hideInNav: true, note: '已对接 /comp/* 调薪方案' },
+  { key: 'salary-approve', title: '调薪审批', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp', 'exec'], depth: '●', done: true, hideInNav: true, note: '已对接审批流；exec 参与审批，页面内薪资金额对 exec 掩码' },
+  { key: 'salary-report', title: '薪酬汇报材料', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp'], depth: '●', done: true, hideInNav: true, note: '已对接调薪/奖金方案实时汇总' },
+  { key: 'bonus-plan', title: '绩效奖金方案', group: '薪酬管理', batch: 7, roles: ['hr_coe_comp', 'exec'], depth: '●', done: true, hideInNav: true, note: '已对接 /comp/bonus-plans' },
+  { key: 'my-salary', title: '我的薪酬', group: '薪酬管理', batch: 7, roles: ['employee', 'manager', 'hr_coe_comp', 'exec'], depth: '●', done: true, hideInNav: true, note: '已对接 /comp/my-salary' },
 
   // ============ 批次 8 · 其余模块 + SaaS 运营 ============
   // 招聘工作台加 hrbp、manager
@@ -161,7 +161,7 @@ export const pageRegistry: PageMeta[] = [
   { key: 'app-structure-opt', title: '人才结构优化', group: '应用中心', batch: 9, roles: [...TALENT_COE, 'exec', 'manager'], depth: '◐', done: true, note: 'mock' },
   { key: 'app-succession', title: '继任者计划', group: '应用中心', batch: 9, roles: ['hr_coe_cadre', 'exec', 'manager', 'hrbp'], depth: '●', done: true },
   { key: 'app-pool', title: '人才梯队建设', group: '应用中心', batch: 9, roles: ['hr_coe_cadre'], depth: '◐', done: true, note: 'mock' },
-  { key: 'app-salary', title: '薪酬福利管理', group: '应用中心', batch: 9, roles: ['hr_coe_comp', 'exec'], depth: '○', done: true, note: 'mock；exec 仅审批，薪资金额掩码' },
+  { key: 'app-salary', title: '薪酬福利管理', group: '应用中心', batch: 9, roles: ['hr_coe_comp', 'exec'], depth: '●', done: true, note: '已对接薪酬后端；exec 审批视图，薪资金额掩码' },
   { key: 'app-nine-grid', title: '人才九宫格动态管理', group: '应用中心', batch: 9, roles: [...TALENT_COE, 'exec', 'manager', 'tenant_admin'], depth: '●', done: true, note: '盘点全流程已对接真实 API' },
   { key: 'app-structure-map', title: '人才结构图', group: '应用中心', batch: 9, roles: [...TALENT_COE, 'exec'], depth: '●', done: true, note: 'P3 已对接三图联动决策大屏' },
   { key: 'executive-dashboard', title: '高层决策大屏', group: '人才盘点', batch: 10, roles: [...TALENT_COE, 'exec'], depth: '●', done: true, hideInNav: true, note: 'P3 战略-组织-人才联动 + 缺口热力 + 梯队健康 + 策略建议' },
