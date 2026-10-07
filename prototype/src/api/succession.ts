@@ -32,6 +32,60 @@ export interface CandidateOut {
   willingness: string;
   perf_label: string | null;
   duty_score: number | null;
+  /** 模块六 P3：统一匹配引擎就绪度（无画像 → null，不造分） */
+  match_score?: number | null;
+  readiness?: string | null;
+}
+
+/** 就绪度三档（PRD 模块六 P3）：Ready Now→P-L1、1–2 年→P-L2、3 年+→P-L3 */
+export const READINESS_META: Record<string, { label: string; color: string }> = {
+  ready_now: { label: 'Ready Now', color: 'var(--sage)' },
+  ready_1_2y: { label: '1–2 年', color: 'var(--ochre)' },
+  ready_3y: { label: '3 年+', color: 'var(--sky)' },
+  unassessed: { label: '暂无画像', color: 'var(--ink-4)' },
+};
+
+export interface RecommendationOut {
+  employee_id: string;
+  name: string;
+  position: string | null;
+  grade: string | null;
+  perf_grade: string | null;
+  match_score: number;
+  readiness: string;
+  readiness_label: string;
+  level: string;
+  reason: string;
+  missing_dims: string[];
+  willingness: string;
+  in_pool: boolean;
+}
+
+export interface MapPositionOut {
+  position_id: string;
+  name: string;
+  dept_name: string | null;
+  sequence: string;
+  grade: string;
+  headcount: number;
+  incumbent_name: string | null;
+  ready_now: number;
+  ready_1_2y: number;
+  ready_3y: number;
+  unassessed: number;
+  candidate_count: number;
+  coverage: number;
+  risk: string;
+}
+
+export interface SuccessionMapOut {
+  positions: MapPositionOut[];
+  summary: {
+    positions: number;
+    ready_now_positions: number;
+    no_backup_positions: number;
+    vacant_positions: number;
+  };
 }
 
 export interface TalentPoolOut {
@@ -71,6 +125,9 @@ function mockPositionToView(p: ReturnType<typeof mockCorePositions>[number]): Co
       willingness: c.willingness,
       perf_label: null,
       duty_score: null,
+      match_score: c.matchScore,
+      readiness:
+        c.readiness === 'ready' ? 'ready_now' : c.readiness === '2y' ? 'ready_3y' : 'ready_1_2y',
     })),
   };
 }
@@ -137,6 +194,9 @@ export const successionApi = {
           willingness: c.willingness,
           perf_label: null,
           duty_score: null,
+          match_score: c.matchScore,
+          readiness:
+            c.readiness === 'ready' ? 'ready_now' : c.readiness === '2y' ? 'ready_3y' : 'ready_1_2y',
         })),
       );
     }
@@ -168,5 +228,72 @@ export const successionApi = {
   updatePool: (poolId: string, body: Record<string, unknown>) => {
     if (USE_MOCK) return Promise.resolve({} as TalentPoolOut);
     return api.put<TalentPoolOut>(`/talent-pools/${poolId}`, body);
+  },
+  /** 单岗位继任推荐（统一匹配引擎 + 就绪度三档，按分排序） */
+  recommendations: (positionId: string, limit = 10) => {
+    if (USE_MOCK) {
+      const p = mockCorePositions().find((x) => x.id === positionId);
+      const cands = p ? successionCandidates(p.id) : [];
+      return Promise.resolve(
+        cands.slice(0, limit).map(
+          (c): RecommendationOut => ({
+            employee_id: c.employeeId,
+            name: c.name,
+            position: c.position,
+            grade: null,
+            perf_grade: null,
+            match_score: c.matchScore,
+            readiness:
+              c.readiness === 'ready' ? 'ready_now' : c.readiness === '2y' ? 'ready_3y' : 'ready_1_2y',
+            readiness_label: c.readiness === 'ready' ? 'Ready Now（核心继任）' : c.readiness === '2y' ? '3 年+潜力储备' : '1–2 年可继任',
+            level: c.matchScore >= 80 ? 'good' : c.matchScore >= 60 ? 'watch' : 'mismatch',
+            reason: c.matchSummary,
+            missing_dims: [],
+            willingness: c.willingness,
+            in_pool: false,
+          }),
+        ),
+      );
+    }
+    return api.get<RecommendationOut[]>(
+      `/core-positions/${positionId}/recommendations?limit=${limit}`,
+    );
+  },
+  /** 继任地图：核心岗位 × 就绪度分桶 */
+  successionMap: (): Promise<SuccessionMapOut> => {
+    if (USE_MOCK) {
+      const positions = mockCorePositions().map((p) => {
+        const cands = successionCandidates(p.id);
+        const buckets = { ready_now: 0, ready_1_2y: 0, ready_3y: 0, unassessed: 0 };
+        for (const c of cands) {
+          if (c.readiness === 'ready') buckets.ready_now += 1;
+          else if (c.readiness === '2y') buckets.ready_3y += 1;
+          else buckets.ready_1_2y += 1;
+        }
+        return {
+          position_id: p.id,
+          name: p.name,
+          dept_name: p.deptName,
+          sequence: '',
+          grade: p.grade,
+          headcount: p.headcount,
+          incumbent_name: p.incumbentName ?? null,
+          ...buckets,
+          candidate_count: cands.length,
+          coverage: Math.round(p.coverage * 100),
+          risk: p.risk,
+        };
+      });
+      return Promise.resolve({
+        positions,
+        summary: {
+          positions: positions.length,
+          ready_now_positions: positions.filter((r) => r.ready_now > 0).length,
+          no_backup_positions: positions.filter((r) => r.candidate_count === 0).length,
+          vacant_positions: positions.filter((r) => !r.incumbent_name).length,
+        },
+      });
+    }
+    return api.get<SuccessionMapOut>('/succession/map');
   },
 };

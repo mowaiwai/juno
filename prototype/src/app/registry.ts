@@ -108,8 +108,9 @@ export const pageRegistry: PageMeta[] = [
   { key: 'my-perf', title: '我的绩效', group: '绩效改进', batch: 5, roles: ['employee', 'manager', 'hrbp', 'hr_coe_perf', 'tenant_admin'], depth: '●', done: true, hideInNav: true },
 
   // ============ 批次 6 · 继任与梯队（已并入容器，归干部管理） ============
-  { key: 'core-positions', title: '核心岗位清单', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre', 'exec'], depth: '◐', done: true, hideInNav: true },
-  { key: 'succession-matrix', title: '继任矩阵图谱', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre', 'exec'], depth: '●', done: true, hideInNav: true },
+  { key: 'core-positions', title: '核心岗位清单', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre', 'exec'], depth: '●', done: true, hideInNav: true, note: '已对接 /core-positions/*；P3 候选出参含统一引擎就绪度' },
+  { key: 'succession-map', title: '继任地图', group: '继任与梯队', batch: 10, roles: ['hr_coe_cadre', 'exec', 'manager', 'hrbp'], depth: '●', done: true, hideInNav: true, note: 'P3 已对接 /succession/map（就绪度三档分桶，聚合不含个人明细）' },
+  { key: 'succession-matrix', title: '继任矩阵图谱', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre', 'exec'], depth: '●', done: true, hideInNav: true, note: '已对接候选管理 + P3 智能推荐（/recommendations）与提名闸门' },
   { key: 'risk-warning', title: '离职风险预警', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre', 'exec'], depth: '●', done: true, hideInNav: true },
   // 意愿/AB 角加 manager、hrbp
   { key: 'willingness', title: '意愿确认', group: '继任与梯队', batch: 6, roles: ['hr_coe_cadre', 'manager', 'hrbp'], depth: '●', done: true, hideInNav: true },

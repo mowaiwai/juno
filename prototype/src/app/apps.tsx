@@ -52,6 +52,7 @@ import { GapForecast } from '@/pages/GapForecast';
 import { DensityDashboard } from '@/pages/DensityDashboard';
 import { CorePositions } from '@/pages/CorePositions';
 import { SuccessionMatrix } from '@/pages/SuccessionMatrix';
+import { SuccessionMap } from '@/pages/SuccessionMap';
 import { RiskWarning } from '@/pages/RiskWarning';
 import { Willingness } from '@/pages/Willingness';
 import { AbRoles } from '@/pages/AbRoles';
@@ -239,6 +240,7 @@ export const APP_SUCCESSION: AppDef = {
   wheel: '消费：员工画像库 · 组织管理库 → 反哺：人才梯队建设',
   tabs: [
     { key: 'positions', label: '核心岗位', pageKey: 'core-positions', component: CorePositions },
+    { key: 'map', label: '继任地图', pageKey: 'succession-map', component: SuccessionMap },
     { key: 'matrix', label: '继任矩阵', pageKey: 'succession-matrix', component: SuccessionMatrix },
     { key: 'risk', label: '离职风险', pageKey: 'risk-warning', component: RiskWarning },
     { key: 'willingness', label: '意愿确认', pageKey: 'willingness', component: Willingness },
