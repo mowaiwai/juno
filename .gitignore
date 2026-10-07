@@ -1,6 +1,39 @@
-# 工作区临时产物（工具/草稿），不入库
+# ===== 工作区临时产物 =====
 .scratch/
 .trae/
 
-# 部署密钥与本地环境（根 docker compose 读取，含 JUNO_SECRET_KEY）
-/.env
+# ===== 已废弃的旧项目（不入库） =====
+RELATIONS/
+hr-saas/
+
+# ===== 部署密钥与本地环境 =====
+.env
+.env.*
+!.env.example
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ===== Node / 前端 =====
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.vercel/
+.vite/
+
+# ===== IDE / OS =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ===== 日志 =====
+*.log

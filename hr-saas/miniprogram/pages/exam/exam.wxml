@@ -1,8 +1,0 @@
-<view class="page">
-  <view class="paper" wx:for="{{certs}}" wx:key="id">
-    <view class="title">{{item.from_grade}} → {{item.to_grade}} 认证考试</view>
-    <view class="info">当前节点：{{item.status}}</view>
-    <button type="primary" size="mini" data-cert="{{item.id}}" bindtap="onTake">进入考试</button>
-  </view>
-  <view wx:if="{{!certs.length && !loading}}" class="empty">暂无待参加考试</view>
-</view>

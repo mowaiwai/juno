@@ -1,9 +1,0 @@
-.page { padding: 24rpx; }
-.idp { background: #fff; border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx; }
-.period { font-size: 30rpx; font-weight: 600; margin-bottom: 12rpx; }
-.row { display: flex; margin-bottom: 8rpx; }
-.label { color: #718096; width: 160rpx; }
-.status { color: #2B6CB0; font-weight: 600; }
-.plan { margin-top: 12rpx; padding-left: 20rpx; }
-.plan-item { font-size: 26rpx; color: #4A5568; margin-bottom: 6rpx; }
-.empty { text-align: center; color: #A0AEC0; margin-top: 40rpx; }
